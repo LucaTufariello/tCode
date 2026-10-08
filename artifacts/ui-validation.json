@@ -1,0 +1,21 @@
+{
+  "created_project_and_nested_file_in_native_ui": true,
+  "unicode_save_close_reopen_unchanged": true,
+  "python_build_run_pytest": true,
+  "cpp_cmake_build_run_ctest": true,
+  "swiftpm_build_run_test": true,
+  "python_cpp_swift_native_debugger_answer_42": true,
+  "real_pty_zsh_color_cwd_and_stty": true,
+  "git_native_stage_commit": "9047a86",
+  "git_clean_after_commit": true,
+  "light_and_dark_native_ui": true,
+  "quick_open_keyboard_filter_and_accept": true,
+  "full_voiceover_and_accessibility_settings_audit": false,
+  "release_native_pytest_result_return_navigation": true,
+  "release_python_completion_and_definition": true,
+  "release_ruff_diagnostics_visible_after_empty_pylsp_update": true,
+  "release_command_z_and_shift_command_z": true,
+  "final_release_content_and_terminal_fill_available_space": true,
+  "final_release_dark_and_light_screenshots": true,
+  "appearance_restored_to_original_system_preference": true
+}

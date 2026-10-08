@@ -1,0 +1,1 @@
+{"interfaceVersion":1,"id":"swift","name":"Swift","extensions":["swift"],"server":"sourcekit-lsp","serverArguments":[],"formatter":"swift-format","adapter":"lldb-dap"}

@@ -1,0 +1,529 @@
+Building for debugging...
+[Computing dependencies]
+[2 / 34]
+[5 / 36] TCodeCore
+[8 / 38] TCodeCore
+[10 / 29] SwiftTerm
+[14 / 25] TCode
+[20 / 31] tCode-product
+[24 / 35] TCode
+/Users/lucatufariello/code/tCode/Sources/TCode/Commands.swift:301:17: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+293 |     }
+294 |     searchHandle?.cancel()
+295 |     searchHandle = Task {
+    |                         |- note: 'self' implicitly strongly captured here
+    |                         `- note: add 'self' as a capture list item to silence
+296 |       do {
+297 |         let exclusions = EditorConfiguration.load(root: root, file: nil).exclusions
+    :
+299 |         guard !Task.isCancelled else { return }
+300 |         choose("Quick Open", items: urls.map { String($0.path.dropFirst(root.path.count + 1)) }) {
+301 |           [weak self] index in self?.open(urls[index])
+    |                 |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                 `- note: explicitly assign the capture list item to silence
+302 |         }
+303 |       } catch { report(error) }
+
+/Users/lucatufariello/code/tCode/Sources/TCode/Commands.swift:391:21: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+357 |     status.stringValue = "Searching…"
+358 |     let exclusions = EditorConfiguration.load(root: root, file: nil).exclusions
+359 |     searchHandle = Task {
+    |                         |- note: 'self' implicitly strongly captured here
+    |                         `- note: add 'self' as a capture list item to silence
+360 |       do {
+361 |         if let replacement {
+    :
+389 |             "\(hits.count) Results",
+390 |             items: hits.map { "\($0.url.lastPathComponent):\($0.line+1)  \($0.preview)" }
+391 |           ) { [weak self] index in
+    |                     |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                     `- note: explicitly assign the capture list item to silence
+392 |             self?.open(hits[index].url, position: Position(line: hits[index].line, character: 0))
+393 |           }
+
+/Users/lucatufariello/code/tCode/Sources/TCode/Commands.swift:432:33: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+425 |       !doc.large
+426 |     else { return }
+427 |     Task {
+    |          |- note: 'self' implicitly strongly captured here
+    |          `- note: add 'self' as a capture list item to silence
+428 |       do {
+429 |         if services[pack.id] == nil {
+430 |           let service = LanguageSession(pack: pack)
+431 |           services[pack.id] = service
+432 |           service.log = { [weak self] text in self?.appendOutput(text) }
+    |                                 |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                                 `- note: explicitly assign the capture list item to silence
+433 |           service.applyEdit = { [weak self] edit, encoding in
+434 |             guard let self else { return false }
+
+/Users/lucatufariello/code/tCode/Sources/TCode/Commands.swift:433:39: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+425 |       !doc.large
+426 |     else { return }
+427 |     Task {
+    |          |- note: 'self' implicitly strongly captured here
+    |          `- note: add 'self' as a capture list item to silence
+428 |       do {
+429 |         if services[pack.id] == nil {
+    :
+431 |           services[pack.id] = service
+432 |           service.log = { [weak self] text in self?.appendOutput(text) }
+433 |           service.applyEdit = { [weak self] edit, encoding in
+    |                                       |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                                       `- note: explicitly assign the capture list item to silence
+434 |             guard let self else { return false }
+435 |             return try await self.applyWorkspaceEdit(edit, encoding: encoding)
+
+/Users/lucatufariello/code/tCode/Sources/TCode/Commands.swift:437:41: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+425 |       !doc.large
+426 |     else { return }
+427 |     Task {
+    |          |- note: 'self' implicitly strongly captured here
+    |          `- note: add 'self' as a capture list item to silence
+428 |       do {
+429 |         if services[pack.id] == nil {
+    :
+435 |             return try await self.applyWorkspaceEdit(edit, encoding: encoding)
+436 |           }
+437 |           service.diagnostics = { [weak self] uri, list in
+    |                                         |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                                         `- note: explicitly assign the capture list item to silence
+438 |             self?.diagnosticList[uri] = list
+439 |             self?.refreshProblems()
+
+/Users/lucatufariello/code/tCode/Sources/TCode/Commands.swift:520:19: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+506 |       extras["context"] = ["diagnostics": diagnosticList[doc.url?.absoluteString ?? ""] ?? []]
+507 |     }
+508 |     Task {
+    |          |- note: 'self' implicitly strongly captured here
+    |          `- note: add 'self' as a capture list item to silence
+509 |       do {
+510 |         let result = try await service.request(
+    :
+518 |           let selection = editor.selectedRange()
+519 |           choose("Completion", items: items.map { $0["label"] as? String ?? "" }) {
+520 |             [weak self] index in
+    |                   |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                   `- note: explicitly assign the capture list item to silence
+521 |             guard doc.version == version else {
+522 |               self?.status.stringValue = "Completion expired after an edit"
+
+/Users/lucatufariello/code/tCode/Sources/TCode/Commands.swift:538:21: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+506 |       extras["context"] = ["diagnostics": diagnosticList[doc.url?.absoluteString ?? ""] ?? []]
+507 |     }
+508 |     Task {
+    |          |- note: 'self' implicitly strongly captured here
+    |          `- note: add 'self' as a capture list item to silence
+509 |       do {
+510 |         let result = try await service.request(
+    :
+536 |             command == "definition" ? "Definitions" : "References",
+537 |             items: locations.map { "\($0["uri"] ?? $0["targetUri"] ?? "")" }
+538 |           ) { [weak self] index in
+    |                     |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                     `- note: explicitly assign the capture list item to silence
+539 |             let location = locations[index]
+540 |             if let uri = (location["uri"] ?? location["targetUri"]) as? String,
+
+/Users/lucatufariello/code/tCode/Sources/TCode/Commands.swift:557:19: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+506 |       extras["context"] = ["diagnostics": diagnosticList[doc.url?.absoluteString ?? ""] ?? []]
+507 |     }
+508 |     Task {
+    |          |- note: 'self' implicitly strongly captured here
+    |          `- note: add 'self' as a capture list item to silence
+509 |       do {
+510 |         let result = try await service.request(
+    :
+555 |           let symbols = flatten(result as? [[String: Any]] ?? [])
+556 |           choose("Document Symbols", items: symbols.map { $0["name"] as? String ?? "" }) {
+557 |             [weak self] index in
+    |                   |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                   `- note: explicitly assign the capture list item to silence
+558 |             let s = symbols[index]
+559 |             let r =
+
+/Users/lucatufariello/code/tCode/Sources/TCode/Commands.swift:575:19: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+506 |       extras["context"] = ["diagnostics": diagnosticList[doc.url?.absoluteString ?? ""] ?? []]
+507 |     }
+508 |     Task {
+    |          |- note: 'self' implicitly strongly captured here
+    |          `- note: add 'self' as a capture list item to silence
+509 |       do {
+510 |         let result = try await service.request(
+    :
+573 |           let actions = result as? [[String: Any]] ?? []
+574 |           choose("Code Actions", items: actions.map { $0["title"] as? String ?? "" }) {
+575 |             [weak self] index in
+    |                   |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                   `- note: explicitly assign the capture list item to silence
+576 |             guard let self else { return }
+577 |             Task {
+
+[#ImplicitStrongCapture]: <https://docs.swift.org/compiler/documentation/diagnostics/implicit-strong-capture>
+/Users/lucatufariello/code/tCode/Sources/TCode/Commands.swift:301:17: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+293 |     }
+294 |     searchHandle?.cancel()
+295 |     searchHandle = Task {
+    |                         |- note: 'self' implicitly strongly captured here
+    |                         `- note: add 'self' as a capture list item to silence
+296 |       do {
+297 |         let exclusions = EditorConfiguration.load(root: root, file: nil).exclusions
+    :
+299 |         guard !Task.isCancelled else { return }
+300 |         choose("Quick Open", items: urls.map { String($0.path.dropFirst(root.path.count + 1)) }) {
+301 |           [weak self] index in self?.open(urls[index])
+    |                 |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                 `- note: explicitly assign the capture list item to silence
+302 |         }
+303 |       } catch { report(error) }
+
+/Users/lucatufariello/code/tCode/Sources/TCode/Commands.swift:391:21: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+357 |     status.stringValue = "Searching…"
+358 |     let exclusions = EditorConfiguration.load(root: root, file: nil).exclusions
+359 |     searchHandle = Task {
+    |                         |- note: 'self' implicitly strongly captured here
+    |                         `- note: add 'self' as a capture list item to silence
+360 |       do {
+361 |         if let replacement {
+    :
+389 |             "\(hits.count) Results",
+390 |             items: hits.map { "\($0.url.lastPathComponent):\($0.line+1)  \($0.preview)" }
+391 |           ) { [weak self] index in
+    |                     |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                     `- note: explicitly assign the capture list item to silence
+392 |             self?.open(hits[index].url, position: Position(line: hits[index].line, character: 0))
+393 |           }
+
+/Users/lucatufariello/code/tCode/Sources/TCode/Commands.swift:432:33: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+425 |       !doc.large
+426 |     else { return }
+427 |     Task {
+    |          |- note: 'self' implicitly strongly captured here
+    |          `- note: add 'self' as a capture list item to silence
+428 |       do {
+429 |         if services[pack.id] == nil {
+430 |           let service = LanguageSession(pack: pack)
+431 |           services[pack.id] = service
+432 |           service.log = { [weak self] text in self?.appendOutput(text) }
+    |                                 |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                                 `- note: explicitly assign the capture list item to silence
+433 |           service.applyEdit = { [weak self] edit, encoding in
+434 |             guard let self else { return false }
+
+/Users/lucatufariello/code/tCode/Sources/TCode/Commands.swift:433:39: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+425 |       !doc.large
+426 |     else { return }
+427 |     Task {
+    |          |- note: 'self' implicitly strongly captured here
+    |          `- note: add 'self' as a capture list item to silence
+428 |       do {
+429 |         if services[pack.id] == nil {
+    :
+431 |           services[pack.id] = service
+432 |           service.log = { [weak self] text in self?.appendOutput(text) }
+433 |           service.applyEdit = { [weak self] edit, encoding in
+    |                                       |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                                       `- note: explicitly assign the capture list item to silence
+434 |             guard let self else { return false }
+435 |             return try await self.applyWorkspaceEdit(edit, encoding: encoding)
+
+/Users/lucatufariello/code/tCode/Sources/TCode/Commands.swift:437:41: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+425 |       !doc.large
+426 |     else { return }
+427 |     Task {
+    |          |- note: 'self' implicitly strongly captured here
+    |          `- note: add 'self' as a capture list item to silence
+428 |       do {
+429 |         if services[pack.id] == nil {
+    :
+435 |             return try await self.applyWorkspaceEdit(edit, encoding: encoding)
+436 |           }
+437 |           service.diagnostics = { [weak self] uri, list in
+    |                                         |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                                         `- note: explicitly assign the capture list item to silence
+438 |             self?.diagnosticList[uri] = list
+439 |             self?.refreshProblems()
+
+/Users/lucatufariello/code/tCode/Sources/TCode/Commands.swift:520:19: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+506 |       extras["context"] = ["diagnostics": diagnosticList[doc.url?.absoluteString ?? ""] ?? []]
+507 |     }
+508 |     Task {
+    |          |- note: 'self' implicitly strongly captured here
+    |          `- note: add 'self' as a capture list item to silence
+509 |       do {
+510 |         let result = try await service.request(
+    :
+518 |           let selection = editor.selectedRange()
+519 |           choose("Completion", items: items.map { $0["label"] as? String ?? "" }) {
+520 |             [weak self] index in
+    |                   |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                   `- note: explicitly assign the capture list item to silence
+521 |             guard doc.version == version else {
+522 |               self?.status.stringValue = "Completion expired after an edit"
+
+/Users/lucatufariello/code/tCode/Sources/TCode/Commands.swift:538:21: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+506 |       extras["context"] = ["diagnostics": diagnosticList[doc.url?.absoluteString ?? ""] ?? []]
+507 |     }
+508 |     Task {
+    |          |- note: 'self' implicitly strongly captured here
+    |          `- note: add 'self' as a capture list item to silence
+509 |       do {
+510 |         let result = try await service.request(
+    :
+536 |             command == "definition" ? "Definitions" : "References",
+537 |             items: locations.map { "\($0["uri"] ?? $0["targetUri"] ?? "")" }
+538 |           ) { [weak self] index in
+    |                     |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                     `- note: explicitly assign the capture list item to silence
+539 |             let location = locations[index]
+540 |             if let uri = (location["uri"] ?? location["targetUri"]) as? String,
+
+/Users/lucatufariello/code/tCode/Sources/TCode/Commands.swift:557:19: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+506 |       extras["context"] = ["diagnostics": diagnosticList[doc.url?.absoluteString ?? ""] ?? []]
+507 |     }
+508 |     Task {
+    |          |- note: 'self' implicitly strongly captured here
+    |          `- note: add 'self' as a capture list item to silence
+509 |       do {
+510 |         let result = try await service.request(
+    :
+555 |           let symbols = flatten(result as? [[String: Any]] ?? [])
+556 |           choose("Document Symbols", items: symbols.map { $0["name"] as? String ?? "" }) {
+557 |             [weak self] index in
+    |                   |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                   `- note: explicitly assign the capture list item to silence
+558 |             let s = symbols[index]
+559 |             let r =
+
+/Users/lucatufariello/code/tCode/Sources/TCode/Commands.swift:575:19: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+506 |       extras["context"] = ["diagnostics": diagnosticList[doc.url?.absoluteString ?? ""] ?? []]
+507 |     }
+508 |     Task {
+    |          |- note: 'self' implicitly strongly captured here
+    |          `- note: add 'self' as a capture list item to silence
+509 |       do {
+510 |         let result = try await service.request(
+    :
+573 |           let actions = result as? [[String: Any]] ?? []
+574 |           choose("Code Actions", items: actions.map { $0["title"] as? String ?? "" }) {
+575 |             [weak self] index in
+    |                   |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                   `- note: explicitly assign the capture list item to silence
+576 |             guard let self else { return }
+577 |             Task {
+
+[#ImplicitStrongCapture]: <https://docs.swift.org/compiler/documentation/diagnostics/implicit-strong-capture>
+[28 / 37] tCode-product
+[31 / 37] TCodeEditorTests-product
+[33 / 39] TCodeEditorTests-product
+[37 / 41] TCodeEditorTests-product
+[39 / 41] TCodeEditorTests-product
+warning: missing creator for mutated node: ('/Users/lucatufariello/code/tCode/.build/out/Products/Debug/SwiftTerm_SwiftTerm.bundle/Contents/MacOS')
+Build complete! (4,96 sec)
+Test Suite 'All tests' started at 2026-10-08 17:33:40.744.
+Test Suite 'TCodeEditorTests.xctest' started at 2026-10-08 17:33:40.757.
+Test Suite 'EditorTests' started at 2026-10-08 17:33:40.757.
+Test Case '-[TCodeEditorTests.EditorTests testCompletionAdditionalEditsShareOneUndoTransaction]' started.
+/Users/lucatufariello/code/tCode/Sources/TCode/WorkspaceWindow.swift:89: warning: -[TCodeEditorTests.EditorTests testCompletionAdditionalEditsShareOneUndoTransaction] : Conflicting constraints detected: <private>.
+
+Will attempt to recover by breaking <private>.
+Test Case '-[TCodeEditorTests.EditorTests testCompletionAdditionalEditsShareOneUndoTransaction]' passed (0.758 seconds).
+Test Case '-[TCodeEditorTests.EditorTests testDocumentSaveRejectsExternalChanges]' started.
+Test Case '-[TCodeEditorTests.EditorTests testDocumentSaveRejectsExternalChanges]' passed (0.007 seconds).
+Test Case '-[TCodeEditorTests.EditorTests testFoldingDoesNotModifySavedText]' started.
+Test Case '-[TCodeEditorTests.EditorTests testFoldingDoesNotModifySavedText]' passed (0.003 seconds).
+Test Case '-[TCodeEditorTests.EditorTests testMeasuredNativeTypingAndLargeFileLoad]' started.
+/Users/lucatufariello/code/tCode/Tests/TCodeEditorTests/EditorTests.swift:201: -[TCodeEditorTests.EditorTests testMeasuredNativeTypingAndLargeFileLoad] : Test skipped - Set TCODE_EDITOR_METRICS for hardware measurements.
+Test Case '-[TCodeEditorTests.EditorTests testMeasuredNativeTypingAndLargeFileLoad]' skipped (0.001 seconds).
+Test Case '-[TCodeEditorTests.EditorTests testMultipleCursorsAndIMEFallback]' started.
+Test Case '-[TCodeEditorTests.EditorTests testMultipleCursorsAndIMEFallback]' passed (0.011 seconds).
+Test Case '-[TCodeEditorTests.EditorTests testNativeUndoAndRedoCommandRouting]' started.
+/Users/lucatufariello/code/tCode/Sources/TCode/WorkspaceWindow.swift:89: warning: -[TCodeEditorTests.EditorTests testNativeUndoAndRedoCommandRouting] : Conflicting constraints detected: <private>.
+
+Will attempt to recover by breaking <private>.
+Test Case '-[TCodeEditorTests.EditorTests testNativeUndoAndRedoCommandRouting]' passed (0.073 seconds).
+Test Case '-[TCodeEditorTests.EditorTests testRealPythonDiagnosticsSurviveEmptyServerUpdateAndMapEmoji]' started.
+Test Case '-[TCodeEditorTests.EditorTests testRealPythonDiagnosticsSurviveEmptyServerUpdateAndMapEmoji]' passed (2.152 seconds).
+Test Case '-[TCodeEditorTests.EditorTests testSplitEditorsShareTextAndUndo]' started.
+Test Case '-[TCodeEditorTests.EditorTests testSplitEditorsShareTextAndUndo]' passed (0.005 seconds).
+Test Suite 'EditorTests' passed at 2026-10-08 17:33:43.769.
+	 Executed 8 tests, with 1 test skipped and 0 failures (0 unexpected) in 3.010 (3.011) seconds
+Test Suite 'TCodeEditorTests.xctest' passed at 2026-10-08 17:33:43.769.
+	 Executed 8 tests, with 1 test skipped and 0 failures (0 unexpected) in 3.010 (3.011) seconds
+Test Suite 'All tests' passed at 2026-10-08 17:33:43.769.
+	 Executed 8 tests, with 1 test skipped and 0 failures (0 unexpected) in 3.010 (3.025) seconds
+Test Suite 'All tests' started at 2026-10-08 17:33:43.873.
+Test Suite 'TCodeCoreTests.xctest' started at 2026-10-08 17:33:43.884.
+Test Suite 'CoreTests' started at 2026-10-08 17:33:43.884.
+Test Case '-[TCodeCoreTests.CoreTests testActualGitStageCommitAndStatus]' started.
+Test Case '-[TCodeCoreTests.CoreTests testActualGitStageCommitAndStatus]' passed (0.176 seconds).
+Test Case '-[TCodeCoreTests.CoreTests testCancellationCleansUpChildProcessGroup]' started.
+Test Case '-[TCodeCoreTests.CoreTests testCancellationCleansUpChildProcessGroup]' passed (0.106 seconds).
+Test Case '-[TCodeCoreTests.CoreTests testCRAndCRLFNavigation]' started.
+Test Case '-[TCodeCoreTests.CoreTests testCRAndCRLFNavigation]' passed (0.000 seconds).
+Test Case '-[TCodeCoreTests.CoreTests testExternalConflictDoesNotOverwrite]' started.
+Test Case '-[TCodeCoreTests.CoreTests testExternalConflictDoesNotOverwrite]' passed (0.002 seconds).
+Test Case '-[TCodeCoreTests.CoreTests testFilesystemCollisionsRenameAndSymlinkSave]' started.
+Test Case '-[TCodeCoreTests.CoreTests testFilesystemCollisionsRenameAndSymlinkSave]' passed (0.003 seconds).
+Test Case '-[TCodeCoreTests.CoreTests testFramingFragmentedCombinedUnicodeAndMalformed]' started.
+Test Case '-[TCodeCoreTests.CoreTests testFramingFragmentedCombinedUnicodeAndMalformed]' passed (0.001 seconds).
+Test Case '-[TCodeCoreTests.CoreTests testMeasuredProjectSearch]' started.
+/Users/lucatufariello/code/tCode/Tests/TCodeCoreTests/CoreTests.swift:205: -[TCodeCoreTests.CoreTests testMeasuredProjectSearch] : Test skipped - Set TCODE_SEARCH_METRICS for hardware measurements.
+Test Case '-[TCodeCoreTests.CoreTests testMeasuredProjectSearch]' skipped (0.001 seconds).
+Test Case '-[TCodeCoreTests.CoreTests testNativeTestResultNavigationFormats]' started.
+Test Case '-[TCodeCoreTests.CoreTests testNativeTestResultNavigationFormats]' passed (0.002 seconds).
+Test Case '-[TCodeCoreTests.CoreTests testPositionsAcrossUnicodeEncodings]' started.
+Test Case '-[TCodeCoreTests.CoreTests testPositionsAcrossUnicodeEncodings]' passed (0.001 seconds).
+Test Case '-[TCodeCoreTests.CoreTests testProcessOutputExitAndCancellation]' started.
+Test Case '-[TCodeCoreTests.CoreTests testProcessOutputExitAndCancellation]' passed (0.112 seconds).
+Test Case '-[TCodeCoreTests.CoreTests testProtocolCancellationAndToolFailure]' started.
+Test Case '-[TCodeCoreTests.CoreTests testProtocolCancellationAndToolFailure]' passed (2.072 seconds).
+Test Case '-[TCodeCoreTests.CoreTests testRecoveryPersistsBaselineAndOriginalEncoding]' started.
+Test Case '-[TCodeCoreTests.CoreTests testRecoveryPersistsBaselineAndOriginalEncoding]' passed (0.004 seconds).
+Test Case '-[TCodeCoreTests.CoreTests testSearchPreviewRejectsExternalModification]' started.
+Test Case '-[TCodeCoreTests.CoreTests testSearchPreviewRejectsExternalModification]' passed (0.005 seconds).
+Test Case '-[TCodeCoreTests.CoreTests testUnicodeAndLineEndingsRoundTrip]' started.
+Test Case '-[TCodeCoreTests.CoreTests testUnicodeAndLineEndingsRoundTrip]' passed (0.001 seconds).
+Test Suite 'CoreTests' passed at 2026-10-08 17:33:46.372.
+	 Executed 14 tests, with 1 test skipped and 0 failures (0 unexpected) in 2.486 (2.488) seconds
+Test Suite 'IntegrationTests' started at 2026-10-08 17:33:46.372.
+Test Case '-[TCodeCoreTests.IntegrationTests testClangdLSP]' started.
+Test Case '-[TCodeCoreTests.IntegrationTests testClangdLSP]' passed (5.109 seconds).
+Test Case '-[TCodeCoreTests.IntegrationTests testCPPDebugBreakpointAndVariables]' started.
+Test Case '-[TCodeCoreTests.IntegrationTests testCPPDebugBreakpointAndVariables]' passed (1.237 seconds).
+Test Case '-[TCodeCoreTests.IntegrationTests testPythonDebugpyBreakpointAndVariables]' started.
+Test Case '-[TCodeCoreTests.IntegrationTests testPythonDebugpyBreakpointAndVariables]' passed (0.568 seconds).
+Test Case '-[TCodeCoreTests.IntegrationTests testPythonLSP]' started.
+Test Case '-[TCodeCoreTests.IntegrationTests testPythonLSP]' passed (5.606 seconds).
+Test Case '-[TCodeCoreTests.IntegrationTests testSwiftDebugBreakpointAndVariables]' started.
+Test Case '-[TCodeCoreTests.IntegrationTests testSwiftDebugBreakpointAndVariables]' passed (1.478 seconds).
+Test Case '-[TCodeCoreTests.IntegrationTests testSwiftLSP]' started.
+Test Case '-[TCodeCoreTests.IntegrationTests testSwiftLSP]' passed (5.299 seconds).
+Test Suite 'IntegrationTests' passed at 2026-10-08 17:34:05.670.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 19.297 (19.298) seconds
+Test Suite 'TCodeCoreTests.xctest' passed at 2026-10-08 17:34:05.670.
+	 Executed 20 tests, with 1 test skipped and 0 failures (0 unexpected) in 21.783 (21.786) seconds
+Test Suite 'All tests' passed at 2026-10-08 17:34:05.671.
+	 Executed 20 tests, with 1 test skipped and 0 failures (0 unexpected) in 21.783 (21.798) seconds
+clangd: I[17:33:46.419] Features: mac+xpc
+
+clangd: I[17:33:46.417] Apple clangd version 21.0.0 (clang-2100.3.34.2)
+
+clangd: I[17:33:46.419] PID: 63322
+
+clangd: I[17:33:46.419] Working directory: /private/var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-93568E63-6B7C-4380-A86F-5B0ED57C15B5
+
+clangd: I[17:33:46.419] argv[0]: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clangd
+
+clangd: I[17:33:46.420] Starting LSP over stdin/stdout
+
+clangd: I[17:33:46.421] <-- initialize(1)
+
+clangd: I[17:33:46.431] --> reply:initialize(1) 10 ms
+
+clangd: I[17:33:46.432] <-- initialized
+
+clangd: I[17:33:46.432] <-- textDocument/didOpen
+
+clangd: I[17:33:46.435] Failed to find compilation database for /var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-93568E63-6B7C-4380-A86F-5B0ED57C15B5/main.cpp
+
+clangd: I[17:33:46.435] ASTWorker building file /var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-93568E63-6B7C-4380-A86F-5B0ED57C15B5/main.cpp version 1 with command clangd fallback
+[/var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-93568E63-6B7C-4380-A86F-5B0ED57C15B5]
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -resource-dir=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/21 -- /var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-93568E63-6B7C-4380-A86F-5B0ED57C15B5/main.cpp
+
+clangd: I[17:33:46.475] Built preamble of size 823808 for file /var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-93568E63-6B7C-4380-A86F-5B0ED57C15B5/main.cpp version 1 in 0.03 seconds
+
+clangd: I[17:33:46.476] Indexing c++14 standard library in the context of /var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-93568E63-6B7C-4380-A86F-5B0ED57C15B5/main.cpp
+
+clangd: I[17:33:46.501] --> textDocument/publishDiagnostics
+
+clangd: I[17:33:47.076] Indexed c++14 standard library: 9400 symbols, 2747 filtered
+
+clangd: I[17:33:48.443] <-- textDocument/definition(2)
+
+clangd: I[17:33:48.443] --> reply:textDocument/definition(2) 0 ms
+
+clangd: I[17:33:48.444] <-- textDocument/completion(3)
+
+clangd: I[17:33:48.453] Code complete: sema context Expression, query scopes [] (AnyScope=true), expected type int
+
+clangd: I[17:33:48.453] Code complete: 1 results from Sema, 5 from Index, 0 matched, 0 from identifiers, 6 returned.
+
+clangd: I[17:33:48.453] --> reply:textDocument/completion(3) 9 ms
+
+clangd: I[17:33:48.453] <-- textDocument/didChange
+
+clangd: I[17:33:48.509] Failed to find compilation database for /var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-93568E63-6B7C-4380-A86F-5B0ED57C15B5/main.cpp
+
+clangd: I[17:33:48.509] ASTWorker building file /var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-93568E63-6B7C-4380-A86F-5B0ED57C15B5/main.cpp version 2 with command clangd fallback
+[/var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-93568E63-6B7C-4380-A86F-5B0ED57C15B5]
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -resource-dir=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/21 -- /var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-93568E63-6B7C-4380-A86F-5B0ED57C15B5/main.cpp
+
+clangd: I[17:33:48.516] --> textDocument/publishDiagnostics
+
+VERIFIED clangd: definition=1, completion=6, diagnostics=2
+clangd: I[17:33:51.478] <-- shutdown(4)
+
+clangd: Tool stopped.
+clangd: I[17:33:51.478] --> reply:shutdown(4) 0 ms
+
+DAP cpp breakpoints: ["success": 1, "command": setBreakpoints, "seq": 0, "request_seq": 3, "type": response, "body": {
+    breakpoints =     (
+                {
+            column = 10;
+            id = 1;
+            instructionReference = 0x1000004AC;
+            line = 4;
+            source =             {
+                name = "main.cpp";
+                path = "/var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-F333EEE1-4BEC-4E37-89EC-DE22CBC5ABE2/main.cpp";
+            };
+            verified = 1;
+        }
+    );
+}]
+VERIFIED cpp breakpoint and answer=42
+DAP cpp: Tool stopped.
+DAP python breakpoints: ["body": {
+    breakpoints =     (
+                {
+            id = 0;
+            line = 2;
+            source =             {
+                path = "/var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-D5CB897F-74A8-43BB-BD8F-2981E4BC066B/main.py";
+            };
+            verified = 1;
+        }
+    );
+}, "success": 1, "seq": 9, "request_seq": 3, "command": setBreakpoints, "type": response]
+VERIFIED python breakpoint and answer=42
+DAP python: Tool stopped.
+VERIFIED pylsp: definition=1, completion=84, diagnostics=2
+pylsp: Tool stopped.
+DAP swift breakpoints: ["success": 1, "seq": 0, "command": setBreakpoints, "request_seq": 3, "body": {
+    breakpoints =     (
+                {
+            column = 8;
+            id = 1;
+            instructionReference = 0x100000674;
+            line = 2;
+            source =             {
+                name = "main.swift";
+                path = "/var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-EF9562B7-6A84-495C-BF29-FFB4AA5911A0/main.swift";
+            };
+            verified = 1;
+        }
+    );
+}, "type": response]
+VERIFIED swift breakpoint and answer=42
+DAP swift: Tool stopped.
+VERIFIED sourcekit-lsp: definition=1, completion=31, diagnostics=1
+sourcekit-lsp: Tool stopped.
+◇ Test run started.
+↳ Testing Library Version: 2084
+↳ Target Platform: arm64e-apple-macos14.0
+✔ Test run with 0 tests in 0 suites passed after 0.001 seconds.
+◇ Test run started.
+↳ Testing Library Version: 2084
+↳ Target Platform: arm64e-apple-macos14.0
+✔ Test run with 0 tests in 0 suites passed after 0.001 seconds.

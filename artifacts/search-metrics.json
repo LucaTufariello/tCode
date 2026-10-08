@@ -1,0 +1,11 @@
+{
+  "hits" : 60000,
+  "ignored_files" : 100,
+  "index_ms" : 6.2959194183349609,
+  "indexed_files" : 1000,
+  "lazy_root_listing_ms" : 0.29098987579345703,
+  "root_children" : 10,
+  "search_ms" : 2416.0240888595581,
+  "source_bytes" : 2100000,
+  "source_files" : 1000
+}

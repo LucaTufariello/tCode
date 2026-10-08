@@ -1,0 +1,8 @@
+{
+  "forced_sigkill": true,
+  "checkpoint_verified_before_kill": true,
+  "recovered_unicode_in_native_editor": true,
+  "external_save_rejected": true,
+  "both_versions_compared": true,
+  "save_copy_preserved_both": true
+}

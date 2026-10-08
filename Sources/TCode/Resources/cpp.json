@@ -1,0 +1,1 @@
+{"interfaceVersion":1,"id":"cpp","name":"C / C++","extensions":["c","h","cc","cpp","hpp","cxx"],"server":"clangd","serverArguments":["--background-index","--clang-tidy"],"formatter":"clang-format","adapter":"lldb-dap"}
