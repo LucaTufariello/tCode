@@ -105,7 +105,7 @@ import TCodeCore
     line.origin.x = 0
     line.size.width = bounds.width
     if line.intersects(rect) {
-      NSColor.quaternaryLabelColor.withAlphaComponent(0.10).setFill()
+      Style.currentLine.setFill()
       line.fill()
     }
     _ = tc
@@ -173,6 +173,7 @@ import TCodeCore
     let recognizer = NSClickGestureRecognizer(target: self, action: #selector(clicked(_:)))
     recognizer.buttonMask = 1
     addGestureRecognizer(recognizer)
+    setAccessibilityLabel("Line numbers and breakpoints")
   }
   required init(coder: NSCoder) { fatalError() }
   @objc func clicked(_ recognizer: NSClickGestureRecognizer) {
@@ -191,7 +192,7 @@ import TCodeCore
   override func drawHashMarksAndLabels(in rect: NSRect) {
     guard let editor, let lm = editor.layoutManager, let tc = editor.textContainer, let scrollView
     else { return }
-    NSColor.textBackgroundColor.setFill()
+    Style.editorBackground.setFill()
     bounds.fill()
     let visible = scrollView.contentView.bounds
     let glyphs = lm.glyphRange(
@@ -199,6 +200,10 @@ import TCodeCore
         dx: -editor.textContainerOrigin.x, dy: -editor.textContainerOrigin.y), in: tc)
     var glyph = glyphs.location
     let ns = editor.string as NSString
+    let activeLine =
+      editor.codeDocument?.large == true
+      ? -1
+      : PositionMap.position(in: editor.string, utf16Offset: editor.selectedRange().location).line + 1
     var line =
       PositionMap.position(
         in: editor.string,
@@ -217,9 +222,10 @@ import TCodeCore
           NSBezierPath(ovalIn: NSRect(x: 5, y: y + 3, width: 9, height: 9)).fill()
         }
         let label = String(line) as NSString
+        let isActive = line == activeLine
         let attributes: [NSAttributedString.Key: Any] = [
-          .font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular),
-          .foregroundColor: NSColor.secondaryLabelColor,
+          .font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: isActive ? .medium : .regular),
+          .foregroundColor: isActive ? Style.gutterActive : Style.gutter,
         ]
         label.draw(
           at: NSPoint(x: 48 - label.size(withAttributes: attributes).width, y: y + 2),
@@ -272,8 +278,8 @@ import TCodeCore
     editor.font =
       candidate?.isFixedPitch == true
       ? candidate : NSFont.monospacedSystemFont(ofSize: fontSize, weight: .regular)
-    editor.textColor = .textColor
-    editor.backgroundColor = .textBackgroundColor
+    editor.textColor = Style.editorText
+    editor.backgroundColor = Style.editorBackground
     editor.insertionPointColor = .controlAccentColor
     // Reserve the gutter inside the text surface; macOS overlay rulers cover that area.
     editor.textContainerInset = NSSize(width: 72, height: 18)
@@ -294,6 +300,7 @@ import TCodeCore
     scroll.automaticallyAdjustsContentInsets = false
     scroll.autohidesScrollers = true
     scroll.borderType = .noBorder
+    scroll.backgroundColor = Style.editorBackground
     ruler = LineRuler(scroll: scroll, editor: editor)
     scroll.verticalRulerView = ruler
     scroll.hasVerticalRuler = true
@@ -307,11 +314,15 @@ import TCodeCore
   }
   override func viewDidLayout() {
     super.viewDidLayout()
-    guard !editor.isHorizontallyResizable else { return }
-    let width = scroll.contentView.bounds.width
-    if width > 0, abs(editor.frame.width - width) > 0.5 {
-      editor.setFrameSize(
-        NSSize(width: width, height: max(editor.frame.height, scroll.contentView.bounds.height)))
+    let clip = scroll.contentView.bounds
+    guard clip.width > 0, clip.height > 0 else { return }
+    // The text surface has to cover the whole pane. TextKit grows it for long documents, but it
+    // must never be left shorter or narrower than the clip view, otherwise a strip of dead
+    // background shows under the last line when the pane grows.
+    let width = editor.isHorizontallyResizable ? editor.frame.width : clip.width
+    let height = max(editor.frame.height, clip.height)
+    if abs(editor.frame.width - width) > 0.5 || abs(editor.frame.height - height) > 0.5 {
+      editor.setFrameSize(NSSize(width: width, height: height))
     }
     if scroll.contentView.bounds.minX != 0 {
       scroll.contentView.scroll(to: NSPoint(x: 0, y: scroll.contentView.bounds.minY))
@@ -362,7 +373,7 @@ import TCodeCore
       if depth == 0 {
         for index in [i, cursor - 1] {
           lm.addTemporaryAttribute(
-            .backgroundColor, value: NSColor.controlAccentColor.withAlphaComponent(0.2),
+            .backgroundColor, value: Style.matchingBracket,
             forCharacterRange: NSRange(location: index, length: 1))
         }
         break
@@ -382,7 +393,9 @@ import TCodeCore
       let spans = await Task.detached { () -> [(NSRange, Int)] in
         let patterns = [
           "\\b(func|let|var|class|struct|enum|import|return|if|else|for|while|def|from|try|except|public|private|static|void|int|float|double|const|auto|namespace|include|async|await|throws|throw|guard|self|True|False|None|true|false|nil)\\b",
-          "\\b[0-9]+(?:\\.[0-9]+)?\\b", "\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*'",
+          "\\b[0-9]+(?:\\.[0-9]+)?\\b",
+          "\\b(?!(?:True|False|None)\\b)[A-Z][A-Za-z0-9_]*\\b",
+          "\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*'",
           "(?m)//.*$|(?m)#.*$",
         ]
         return patterns.enumerated().flatMap { index, pattern in
@@ -397,7 +410,10 @@ import TCodeCore
       lm.removeTemporaryAttribute(
         .foregroundColor,
         forCharacterRange: NSRange(location: 0, length: self.document.storage.length))
-      let colors: [NSColor] = [.systemPurple, .systemOrange, .systemGreen, .secondaryLabelColor]
+      let colors: [NSColor] = [
+        Style.syntaxKeyword, Style.syntaxNumber, Style.syntaxType, Style.syntaxString,
+        Style.syntaxComment,
+      ]
       for (range, index) in spans {
         lm.addTemporaryAttribute(.foregroundColor, value: colors[index], forCharacterRange: range)
       }

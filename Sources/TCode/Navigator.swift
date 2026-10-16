@@ -21,6 +21,8 @@ import AppKit
   }
 }
 
+/// A transient sidebar list — test results, variable values and similar — shown below the
+/// sidebar title. The title row already names the list, so it is not repeated here.
 @MainActor final class NavigatorList: NSViewController, NSTableViewDataSource, NSTableViewDelegate {
   let rows: [String], selection: (Int) -> Void, table = ActionTable(), navigatorTitle: String
   init(title: String, rows: [String], selection: @escaping (Int) -> Void) {
@@ -34,12 +36,19 @@ import AppKit
     let stack = NSStackView()
     stack.orientation = .vertical
     stack.alignment = .leading
-    stack.spacing = 8
-    let label = NSTextField(labelWithString: navigatorTitle)
-    label.font = .systemFont(ofSize: 11, weight: .semibold)
-    label.textColor = .secondaryLabelColor
-    label.lineBreakMode = .byTruncatingMiddle
-    stack.addArrangedSubview(label)
+    stack.spacing = 0
+    stack.edgeInsets = NSEdgeInsets(top: 2, left: 0, bottom: 0, right: 0)
+    if rows.isEmpty {
+      let empty = NSTextField(labelWithString: "No results.")
+      empty.font = Style.body
+      empty.textColor = .tertiaryLabelColor
+      empty.alignment = .center
+      empty.setAccessibilityLabel(navigatorTitle + ": no results")
+      stack.addArrangedSubview(empty)
+      empty.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -16).isActive = true
+      view = stack
+      return
+    }
     let sc = NSScrollView()
     sc.hasVerticalScroller = true
     sc.drawsBackground = false
@@ -47,6 +56,7 @@ import AppKit
     table.addTableColumn(column)
     table.headerView = nil
     table.backgroundColor = .clear
+    table.style = .sourceList
     table.rowSizeStyle = .medium
     table.dataSource = self
     table.delegate = self
@@ -62,7 +72,7 @@ import AppKit
   func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView?
   {
     let label = NSTextField(labelWithString: rows[row])
-    label.font = .systemFont(ofSize: 12)
+    label.font = Style.body
     label.lineBreakMode = .byTruncatingMiddle
     return label
   }

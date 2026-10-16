@@ -22,25 +22,28 @@ extension Notification.Name {
   var current: WorkspaceWindow? { windows.first { $0.window?.isKeyWindow == true } ?? windows.last }
   func applicationDidFinishLaunching(_ notification: Notification) {
     makeMenu()
-    let args = CommandLine.arguments.dropFirst().filter { !$0.hasPrefix("-") }
-    let saved = UserDefaults.standard.stringArray(forKey: "workspaces") ?? []
-    let roots = args.isEmpty ? saved : args
+    let roots = CommandLine.arguments.dropFirst().filter { !$0.hasPrefix("-") }
     Task {
       var recovered: [CodeDocument] = []
       do {
         for record in try await CodeDocument.recovery.read() {
+          // A record is only worth restoring when its file is still on disk and its buffer
+          // still holds unsaved work. Anything else is stale and is dropped for good.
+          if record.path.map({ !FileManager.default.fileExists(atPath: $0) }) ?? false
+            || (record.path == nil && record.text.isEmpty)
+          {
+            try? await CodeDocument.recovery.remove(record.id)
+            continue
+          }
           let doc = CodeDocument(
             url: record.path.map { URL(fileURLWithPath: $0) }, recovery: record)
           DocumentPool.shared.documents.append(doc)
           recovered.append(doc)
         }
       } catch { NSLog("Recovery: %@", error.localizedDescription) }
-      if roots.isEmpty {
-        newWindow(nil)
-      } else {
-        for path in roots.prefix(8) where FileManager.default.fileExists(atPath: path) {
-          newWindow(URL(fileURLWithPath: path))
-        }
+      // Without an explicit path on the command line tCode always starts on its welcome page.
+      for path in roots.prefix(8) where FileManager.default.fileExists(atPath: path) {
+        newWindow(URL(fileURLWithPath: path))
       }
       if windows.isEmpty { newWindow(nil) }
       for doc in recovered { current?.add(doc) }
@@ -90,7 +93,6 @@ extension Notification.Name {
   }
   func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool { true }
   func persist() {
-    UserDefaults.standard.set(windows.compactMap { $0.root?.path }, forKey: "workspaces")
     for w in windows { w.persist() }
   }
   @objc func menuAction(_ item: NSMenuItem) {
@@ -204,7 +206,7 @@ extension Notification.Name {
     menu(
       "Find",
       [
-        ("Find / Replace…", "find", "f", .command),
+        ("Find in File…", "find", "f", .command),
         ("Find in Workspace…", "search", "f", [.command, .shift]),
         ("Quick Open…", "quickOpen", "p", .command),
         ("Command Palette…", "palette", "p", [.command, .shift]),
@@ -243,7 +245,7 @@ extension Notification.Name {
       "Run",
       [
         ("Toggle Breakpoint", "breakpoint", "y", [.command, .shift]),
-        ("Run…", "run", "r", .command), ("Build", "build", "b", .command),
+        ("Run", "run", "r", .command), ("Build", "build", "b", .command),
         ("Test", "test", "u", .command), ("Discover Tests", "discoverTests", "", []),
         ("Edit Run Configuration…", "configuration", "", []),
         ("Cancel Task", "cancel", ".", [.command, .control]),
@@ -362,43 +364,104 @@ struct SettingsView: View {
 }
 
 struct ShortcutsView: View {
-  @State private var command = "quickOpen"
-  @State private var key = "p"
+  struct Entry: Identifiable {
+    let id: String
+    let label: String
+    let key: String
+    let modifiers: String
+    var glyph: String { Self.glyph(key, modifiers) }
+    static func glyph(_ key: String, _ modifiers: String) -> String {
+      var text = ""
+      if modifiers.contains("control") { text += "\u{2303}" }
+      if modifiers.contains("option") { text += "\u{2325}" }
+      if modifiers.contains("shift") { text += "\u{21E7}" }
+      if modifiers.contains("command") { text += "\u{2318}" }
+      return text + key.uppercased()
+    }
+  }
+  static let catalog: [Entry] = [
+    .init(id: "find", label: "Find in File", key: "f", modifiers: "command"),
+    .init(id: "search", label: "Find in Workspace", key: "f", modifiers: "command shift"),
+    .init(id: "quickOpen", label: "Quick Open", key: "p", modifiers: "command"),
+    .init(id: "palette", label: "Command Palette", key: "p", modifiers: "command shift"),
+    .init(id: "goLine", label: "Go to Line", key: "l", modifiers: "command"),
+    .init(id: "newFile", label: "New File", key: "n", modifiers: "command"),
+    .init(id: "save", label: "Save", key: "s", modifiers: "command"),
+    .init(id: "saveAll", label: "Save All", key: "s", modifiers: "command option"),
+    .init(id: "closeTab", label: "Close Tab", key: "w", modifiers: "command"),
+    .init(id: "comment", label: "Toggle Comment", key: "/", modifiers: "command"),
+    .init(id: "format", label: "Format Document", key: "i", modifiers: "command shift"),
+    .init(id: "splitVertical", label: "Split Vertically", key: "\\", modifiers: "command"),
+    .init(id: "panel", label: "Toggle Bottom Panel", key: "j", modifiers: "command"),
+    .init(id: "sidebar", label: "Toggle Sidebar", key: "0", modifiers: "command"),
+    .init(id: "terminal", label: "New Terminal", key: "`", modifiers: "command shift"),
+    .init(id: "run", label: "Run", key: "r", modifiers: "command"),
+    .init(id: "build", label: "Build", key: "b", modifiers: "command"),
+    .init(id: "test", label: "Test", key: "u", modifiers: "command"),
+    .init(id: "completion", label: "Complete", key: " ", modifiers: "control"),
+  ]
+  @State private var command = "find"
+  @State private var key = "f"
   @State private var modifiers = "command"
   @State private var result = ""
+  private var entry: Entry { Self.catalog.first { $0.id == command } ?? Self.catalog[0] }
+  private func custom(_ id: String) -> [String: String]? {
+    (UserDefaults.standard.dictionary(forKey: "keybindings") as? [String: [String: String]])?[id]
+  }
+  private func current() -> String {
+    let override = custom(entry.id)
+    return Entry.glyph(override?["key"] ?? entry.key, override?["modifiers"] ?? entry.modifiers)
+  }
   var body: some View {
     Form {
-      Text("Customize a tCode menu command. Changes apply immediately.").foregroundStyle(.secondary)
+      Text("Customize a tCode menu command. Changes apply immediately.")
+        .foregroundStyle(.secondary)
       Picker("Command", selection: $command) {
-        ForEach(
-          [
-            "quickOpen", "palette", "saveAll", "search", "goLine", "comment", "splitVertical",
-            "panel", "run", "build", "test", "format", "completion",
-          ], id: \.self
-        ) { Text($0).tag($0) }
+        ForEach(Self.catalog) { Text($0.label).tag($0.id) }
       }
+      .onChange(of: command) { _, value in
+        guard let next = Self.catalog.first(where: { $0.id == value }) else { return }
+        key = next.key
+        modifiers = next.modifiers
+      }
+      LabeledContent("Current shortcut", value: current())
       TextField("Key (one character)", text: $key)
       TextField("Modifiers", text: $modifiers)
-      Text("Modifiers: command, shift, option, control. Separate with spaces.").font(.caption)
-      Button("Apply Shortcut") {
-        guard key.count == 1 else {
-          result = "Enter one character."
-          return
+      Text("Modifiers: command, shift, option, control. Separate with spaces.")
+        .font(.caption)
+        .foregroundStyle(.secondary)
+      HStack {
+        Button("Apply Shortcut") {
+          guard key.count == 1 else {
+            result = "Enter one character."
+            return
+          }
+          var bindings = customBindings()
+          bindings[command] = ["key": key, "modifiers": modifiers]
+          UserDefaults.standard.set(bindings, forKey: "keybindings")
+          (NSApp.delegate as? AppDelegate)?.makeMenu()
+          result = "\(entry.label) is now \(current())."
         }
-        var bindings =
-          UserDefaults.standard.dictionary(forKey: "keybindings") as? [String: [String: String]]
-          ?? [:]
-        bindings[command] = ["key": key, "modifiers": modifiers]
-        UserDefaults.standard.set(bindings, forKey: "keybindings")
-        (NSApp.delegate as? AppDelegate)?.makeMenu()
-        result = "Shortcut applied."
+        Button("Reset This Command") {
+          var bindings = customBindings()
+          bindings.removeValue(forKey: command)
+          UserDefaults.standard.set(bindings, forKey: "keybindings")
+          (NSApp.delegate as? AppDelegate)?.makeMenu()
+          key = entry.key
+          modifiers = entry.modifiers
+          result = "\(entry.label) restored to \(entry.glyph)."
+        }
       }
-      Button("Restore Default Shortcuts") {
+      Button("Restore All Default Shortcuts") {
         UserDefaults.standard.removeObject(forKey: "keybindings")
         (NSApp.delegate as? AppDelegate)?.makeMenu()
         result = "Defaults restored."
       }
-      Text(result)
+      Text(result).foregroundStyle(.secondary)
     }.formStyle(.grouped)
+  }
+
+  private func customBindings() -> [String: [String: String]] {
+    UserDefaults.standard.dictionary(forKey: "keybindings") as? [String: [String: String]] ?? [:]
   }
 }

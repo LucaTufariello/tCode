@@ -5,14 +5,14 @@
 | Area | Status | Behavior and boundaries |
 |---|---|---|
 | Native macOS 27 / arm64 app | Implemented | AppKit/SwiftUI, native text/terminal, no web/JS runtime; Release app and ad hoc signature verified. |
-| Native toolbar, sidebar, panel, inspector | Implemented | Resizable/collapsible split views, Files/Search/Git/Run, tabs, Terminal/Problems/Build Output/Debug Console. System Liquid Glass control header, macOS 27 interactive effect/concentric corners. |
+| Native toolbar, sidebar, panel, inspector | Implemented | Resizable/collapsible split views, a project-named file list that also hosts transient lists such as discovered tests, custom-drawn tabs with modified dots and no close buttons (⌘W and tab context menu), Terminal/Problems/Build Output/Debug Console with a live problem count. System Liquid Glass control header, macOS 27 interactive effect/concentric corners. |
 | Multiple windows, full screen, recent folders | Implemented | Native window/menu behavior and per-workspace restoration. Full-screen entry is a standard AppKit operation; extended multi-display restoration is untested. |
 | File operations | Implemented | Native create project/files/nested folders, rename/move/duplicate/Trash/reveal/copy path, sidebar drag moves, collision/symlink validation, lazy tree and watchers. Trash preserves open text as untitled. |
 | External rename/delete tracking | Partial | In-app moves update document paths and close/reopen services. External writes/rename/delete are detected and save rejects conflicts; arbitrary external renames are not automatically resolved to a new path. |
 | Untitled, Save/As/All, undo, autosave | Implemented | Shared document UndoManager, atomic save with original-byte check, modified tabs, native panels, opt-in autosave. New buffers keep native editing. |
 | Crash recovery and external conflict | Implemented | Private debounced recovery records; actual SIGKILL/relaunch recovery tested. Comparison and Save a Copy preserved both versions in a native workflow. |
 | Text formats and file metadata | Partial | UTF-8 with/without BOM and BOM-marked UTF-16 LE/BE round-trip; line endings preserved. Unsupported/binary encodings safely rejected. ACL/xattr preservation/cloud coordination not implemented. |
-| Native editor / input | Implemented | NSTextView/TextKit 1 range edits, Unicode/emoji/combining text, marked-input fallback, shared storage/undo across splits, visible gutter/current line/brackets. |
+| Native editor / input | Implemented | NSTextView/TextKit 1 range edits, Unicode/emoji/combining text, marked-input fallback, shared storage/undo across splits, themed surface with gutter, current-line tint, bracket match, and light/dark syntax palette. |
 | Highlighting | Partial | Debounced background regex colors; multiline grammar, semantic tokens, Tree-sitter and incremental parsing deferred. |
 | Indentation/wrap/comments/line ops | Implemented | Configurable tabs/spaces/wrapping, newline indent, comment toggle, duplicate line, basic per-language snippet insertion. |
 | Multiple selections/cursors | Partial | Native multiple selections plus added insertion cursors above/below; insertion and IME fallback tested. Secondary-cursor deletion/movement and full snippet tab-stop sessions are deferred. |

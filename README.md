@@ -17,16 +17,20 @@ The script checks the host and SDK, resolves the pinned SwiftTerm dependency, bu
 
 ## First use
 
-1. Choose **File → Open Folder** (⇧⌘O) or **New Project Folder** (⌥⌘N). Opening a folder does not run its tasks or tools.
+tCode opens on its welcome page, with no file and no folder loaded. Recent folders are listed there for reopening. From there:
+
+1. Choose **File → Open Folder** (⇧⌘O) or **New Project Folder** (⌥⌘N). Opening a folder does not run its tasks or tools. The project name titles the sidebar above its file list.
 2. Create nested folders with **File → New Folder** (⌃⌘N) and files with the sidebar context menu or Command Palette (⇧⌘P). New File (⌘N) creates an untitled buffer; Save (⌘S) chooses its location.
-3. Use Quick Open (⌘P), Go to Line (⌘L), Find (⌘F), and workspace regex search (⇧⌘F). The palette includes a reviewed workspace replacement command.
+3. Use Quick Open (⌘P), Go to Line (⌘L), Find in File (⌘F), and workspace regex search (⇧⌘F). The palette includes a reviewed workspace replacement command.
 4. Choose **Editor → Enable Language Tools** explicitly for completion, diagnostics, definitions, hover, signatures, references, symbols, rename, and code actions. Missing tools leave editing available.
-5. Use Build (⌘B), Run (⌘R), Test (⌘U), and the Run sidebar. **Edit Run Configuration** stores executable, arguments, environment, working directory, Python interpreter, and debug program in `.tcode/run.json`. Execution occurs only on your command.
+5. Use Build (⌘B), Run (⌘R), and Test (⌘U) from the Run menu. **Edit Run Configuration** stores executable, arguments, environment, working directory, Python interpreter, and debug program in `.tcode/run.json`. Execution occurs only on your command.
 6. Open a real zsh terminal with ⇧⌘` or the panel's + button. The palette switches or closes terminal sessions.
 
-Toggle a breakpoint at the caret with ⇧⌘Y or click the gutter. Choose Start Debugging, then use the Run sidebar for stepping, stack frames, variables, and saved watches. Debugging requires a saved file and an available adapter. Build C++ and Swift targets with debug symbols before launching LLDB.
+Editor tabs have no close button: close one with ⌘W, or right-click it for Close Tab, Close Other Tabs, Close All Tabs, Reveal in Finder, and Copy Path.
 
-Settings (⌘,) provides appearance, editor font/size, indentation, autosave, language-tool enablement/paths, and menu shortcut overrides. New panes adopt editor preferences. Workspace settings and the supported EditorConfig subset are documented in [setup](docs/SETUP.md).
+Toggle a breakpoint at the caret with ⇧⌘Y or click the gutter. Choose Start Debugging, then use the Run menu for stepping, call stack, variables, and saved watches. Debugging requires a saved file and an available adapter. Build C++ and Swift targets with debug symbols before launching LLDB.
+
+Settings (⌘,) provides appearance, editor font/size, indentation, autosave, language-tool enablement/paths, and menu shortcut overrides for every command listed there, including Find in File (⌘F). New panes adopt editor preferences. Workspace settings and the supported EditorConfig subset are documented in [setup](docs/SETUP.md).
 
 ## Optional language tools
 

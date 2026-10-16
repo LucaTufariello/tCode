@@ -137,7 +137,7 @@ extension WorkspaceWindow {
     var fields: [NSTextField] = []
     for (name, value) in zip(names, values) {
       let label = NSTextField(labelWithString: name)
-      label.font = .systemFont(ofSize: 11)
+      label.font = Style.caption
       let field = NSTextField(string: value)
       field.widthAnchor.constraint(equalToConstant: 520).isActive = true
       field.cell?.wraps = true

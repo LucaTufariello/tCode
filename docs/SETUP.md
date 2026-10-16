@@ -24,7 +24,7 @@ Pinned versions are in `tool-requirements.txt`; license metadata is in `python-t
 
 ## Python
 
-Open `Examples/Python` and `main.py`. Build runs `python -m compileall -q .`, Run executes the active Python file, Test runs `python -m pytest -v`, and Discover Tests uses `pytest --collect-only -q`. Results are listed in the sidebar and navigate to matching test definitions; complete runner output stays in Build Output.
+Open `Examples/Python` and `main.py`. Build runs `python -m compileall -q .`, Run executes the active Python file, Test runs `python -m pytest -v`, and Discover Tests uses `pytest --collect-only -q`. Results replace the file list under the sidebar title and navigate to matching test definitions; the sidebar's back chevron returns to the files; complete runner output stays in Build Output.
 
 The default interpreter resolution prefers `.venv/bin/python3`, then the managed tools interpreter. Choose another interpreter in Run Configuration. pylsp Jedi receives this interpreter for analysis. **debugpy and pytest must be installed in the chosen interpreter**; tCode never installs them automatically. pylsp and Ruff executables can live in the managed environment independently of project imports.
 

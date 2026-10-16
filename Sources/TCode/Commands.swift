@@ -52,7 +52,13 @@ extension WorkspaceWindow {
     case "createFile", "newFolder", "rename", "move", "duplicate", "trash", "reveal", "copyPath":
       fileCommand(command)
     case "sidebar": outer.splitViewItems.first?.isCollapsed.toggle()
-    case "panel": vertical.splitViewItems.last?.isCollapsed.toggle()
+    case "panel":
+      if vertical.splitViewItems.last?.isCollapsed == true {
+        showBottom(selectedPanel)
+      } else {
+        syncPanelHeight()
+        vertical.splitViewItems.last?.isCollapsed = true
+      }
     case "inspector": outer.splitViewItems.last?.isCollapsed.toggle()
     case "splitVertical", "splitHorizontal":
       guard let doc = active else { return }
@@ -77,9 +83,16 @@ extension WorkspaceWindow {
     case "fold": focusedEditor?.foldSelection(nil)
     case "snippet": snippet()
     case "find":
+      guard let target = focusedEditor, let scroll = target.enclosingScrollView else {
+        status.stringValue = "Open a file to search inside it."
+        return
+      }
+      if scroll.findBarPosition != .aboveContent { scroll.findBarPosition = .aboveContent }
+      window?.makeFirstResponder(target)
+      target.scrollRangeToVisible(target.selectedRange())
       let item = NSMenuItem()
       item.tag = NSTextFinder.Action.showFindInterface.rawValue
-      editor?.performFindPanelAction(item)
+      target.performFindPanelAction(item)
     case "regexReplace": regexReplace()
     case "goLine":
       if let input = input("Go to line", defaultValue: "1"), let line = Int(input) {
@@ -266,7 +279,7 @@ extension WorkspaceWindow {
   func commandPalette() {
     let commands: [(String, String)] = [
       ("Enable Language Tools in Workspace", "enableLanguages"), ("Quick Open", "quickOpen"),
-      ("Search Workspace", "search"), ("Replace in Workspace (Preview)", "replaceProject"),
+      ("Find in Workspace…", "search"), ("Replace in Workspace…", "replaceProject"),
       ("Find / Replace with Regex", "regexReplace"),
       ("Create File in Sidebar Folder", "createFile"), ("Create Nested Folder", "newFolder"),
       ("Reload from Disk", "reload"), ("Save All", "saveAll"), ("Format Document", "format"),
@@ -343,7 +356,8 @@ extension WorkspaceWindow {
   func searchProject(replace: Bool) {
     guard let root,
       let pattern = input(
-        replace ? "Replace in Workspace — search pattern" : "Search Workspace",
+        replace
+          ? "Replace in Workspace — search pattern" : "Find in Workspace — search pattern",
         detail:
           "Regular expressions are supported. Dependency and build folders are excluded. Files above 2 MB are skipped."
       ), !pattern.isEmpty
@@ -407,9 +421,23 @@ extension WorkspaceWindow {
       "\(changes.count) files. All original bytes are checked again before saving."
     let sc = NSScrollView(frame: NSRect(x: 0, y: 0, width: 650, height: 360))
     sc.hasVerticalScroller = true
+    sc.autohidesScrollers = true
     let tv = NSTextView(frame: sc.bounds)
     tv.isEditable = false
-    tv.font = .monospacedSystemFont(ofSize: 11, weight: .regular)
+    tv.font = Style.mono
+    tv.textColor = Style.editorText
+    tv.backgroundColor = Style.editorBackground
+    tv.textContainerInset = Style.textInsets
+    tv.textContainer?.lineFragmentPadding = 0
+    // Same scrollable setup as the output panels: long previews scroll instead of clipping.
+    tv.isVerticallyResizable = true
+    tv.isHorizontallyResizable = false
+    tv.autoresizingMask = [.width]
+    tv.textContainer?.containerSize = NSSize(width: 0, height: CGFloat.greatestFiniteMagnitude)
+    tv.textContainer?.widthTracksTextView = true
+    tv.minSize = NSZeroSize
+    tv.maxSize = NSSize(
+      width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
     tv.string = changes.map { c in
       "FILE: \(c.url.path)\n\nBEFORE\n\((try? TextFile(data:c.before).text) ?? "")\n\nAFTER\n\(c.text)\n\n────────────────────────────\n"
     }.joined()
@@ -453,14 +481,18 @@ extension WorkspaceWindow {
     }
   }
   func refreshProblems() {
-    problems.string = diagnosticList.sorted { $0.key < $1.key }.flatMap { uri, list in
-      list.map { d in
+    let entries = diagnosticList.sorted { $0.key < $1.key }.flatMap { uri, list in
+      list.map { d -> String in
         let p = (d["range"] as? [String: Any])?["start"] as? [String: Int]
         return
           "\(URL(string:uri)?.path ?? uri):\((p?["line"] ?? 0)+1):\((p?["character"] ?? 0)+1)  \(d["message"] ?? "")"
       }
-    }.joined(separator: "\n\n")
+    }
+    problems.string =
+      entries.isEmpty ? "No problems detected." : entries.joined(separator: "\n\n")
     linkHandler.decorate(problems)
+    panelSelector.setLabel(
+      entries.isEmpty ? "Problems" : "Problems (\(entries.count))", forSegment: 1)
     for pane in panes {
       guard let uri = pane.document.url?.absoluteString, let lm = pane.editor.layoutManager else {
         continue
@@ -474,10 +506,12 @@ extension WorkspaceWindow {
             in: pane.document.text, json: json,
             encoding: pane.document.languageSession?.encoding ?? "utf-16")
         {
+          // Errors, warnings, information and hints stay visually distinct in the editor.
           lm.addTemporaryAttributes(
             [
               .underlineStyle: NSUnderlineStyle.patternDot.rawValue
-                | NSUnderlineStyle.single.rawValue, .underlineColor: NSColor.systemRed,
+                | NSUnderlineStyle.single.rawValue,
+              .underlineColor: Style.diagnostic(severity: d["severity"] as? Int),
             ], forCharacterRange: range)
         }
       }
@@ -632,7 +666,7 @@ extension WorkspaceWindow {
         let uri = td["uri"] as? String, let values = change["edits"] as? [[String: Any]]
       else {
         throw TCodeError.message(
-          "Resource creation, rename and deletion require the Files navigator.")
+          "Resource creation, rename and deletion require the project file list.")
       }
       if let version = td["version"] as? Int,
         let doc = DocumentPool.shared.documents.first(where: { $0.url?.absoluteString == uri }),
