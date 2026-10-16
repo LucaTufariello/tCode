@@ -13,7 +13,7 @@ import time
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--app', type=Path, default=Path('dist/tCode.app'))
-parser.add_argument('--workspace', type=Path, default=Path('Examples/Python'))
+parser.add_argument('--workspace', type=Path, required=True)
 parser.add_argument('--output', type=Path, default=Path('artifacts/launch-metrics.json'))
 parser.add_argument('--runs', type=int, default=5)
 args = parser.parse_args()

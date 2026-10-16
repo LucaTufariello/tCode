@@ -24,7 +24,7 @@ Pinned versions are in `tool-requirements.txt`; license metadata is in `python-t
 
 ## Python
 
-Open `Examples/Python` and `main.py`. Build runs `python -m compileall -q .`, Run executes the active Python file, Test runs `python -m pytest -v`, and Discover Tests uses `pytest --collect-only -q`. Results replace the file list under the sidebar title and navigate to matching test definitions; the sidebar's back chevron returns to the files; complete runner output stays in Build Output.
+With a Python file active, Build runs `python -m compileall -q .`, Run executes the active Python file, Test runs `python -m pytest -v`, and Discover Tests uses `pytest --collect-only -q`. Results replace the file list under the sidebar title and navigate to matching test definitions; the sidebar's back chevron returns to the files; complete runner output stays in Build Output.
 
 The default interpreter resolution prefers `.venv/bin/python3`, then the managed tools interpreter. Choose another interpreter in Run Configuration. pylsp Jedi receives this interpreter for analysis. **debugpy and pytest must be installed in the chosen interpreter**; tCode never installs them automatically. pylsp and Ruff executables can live in the managed environment independently of project imports.
 
@@ -32,13 +32,13 @@ Choose Enable Language Tools to start pylsp and Ruff. The bundled pack evaluated
 
 ## C and C++
 
-Open `Examples/Cpp`, open `main.cpp`, Build, Run, and Test. Build configures CMake into `build/` with debug symbols and `CMAKE_EXPORT_COMPILE_COMMANDS=ON`, then builds. CTest uses the build directory. The example config launches `build/sample` for Run/Debug. Set these paths for other projects in Run Configuration. The initial configuration assumes a single CMake build directory; presets and multi-configuration generators are outside this implementation.
+For a folder with a root `CMakeLists.txt`, Build configures CMake into `build/` with debug symbols and `CMAKE_EXPORT_COMPILE_COMMANDS=ON`, then builds; Test and Discover Tests run CTest against `build/`. Run and Debug launch the program set in Run Configuration (a relative path such as `build/<name>`); choosing either before one is set opens the configuration dialog. The initial configuration assumes a single CMake build directory; presets and multi-configuration generators are outside this implementation.
 
 clangd reads `compile_commands.json`; a database under `build/` is passed explicitly when a language session starts. Build before enabling tools if no database exists. clang-format uses the document path for configuration discovery. LLDB DAP comes from Xcode. The tested sample and native debug adapter are arm64.
 
 ## Swift
 
-Open `Examples/Swift`, open `Sources/Sample/main.swift`, then Build, Run, and Test. SwiftPM supplies building, running, test listing, and testing. This Xcode/SwiftPM stores the executable at `.build/out/Products/Debug/Sample`; the example debug configuration uses that path. Use `swift build --show-bin-path` to confirm the path in another toolchain.
+For a folder with a root `Package.swift`, Build, Run, Test, and Discover Tests use SwiftPM (`swift build`, `swift run`, `swift test`, `swift test list`); a Run Configuration executable overrides Run. This Xcode/SwiftPM stores executables under `.build/out/Products/Debug/`; set the Debug program in Run Configuration to the built binary before Start Debugging. Use `swift build --show-bin-path` to confirm the path in another toolchain.
 
 SourceKit-LSP and swift-format come from the chosen Xcode toolchain. SwiftPM executable/library targets and standalone Swift source/debug executables are supported. A real Swift arm64 binary was debugged with Xcode's LLDB DAP. Complete `.xcodeproj`/`.xcworkspace`, signing, simulator, and iOS project integration are not claimed.
 
@@ -60,12 +60,12 @@ Workspace run settings:
 
 ```json
 {
-  "executable": "build/sample",
+  "executable": "build/app",
   "arguments": [],
   "environment": {},
   "workingDirectory": "",
   "python": "",
-  "debugProgram": "build/sample"
+  "debugProgram": "build/app"
 }
 ```
 

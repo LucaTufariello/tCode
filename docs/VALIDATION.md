@@ -71,7 +71,7 @@ Raw data: `artifacts/launch-metrics.json`, `artifacts/editor-metrics.json`, `art
 Reproduce startup/RSS after building, with other tCode instances closed:
 
 ```sh
-python3 scripts/measure-launch.py
+python3 scripts/measure-launch.py --workspace /path/to/project
 ```
 
 The script uses a temporary isolated recovery directory and a fixture workspace, runs five local launches without activating project tasks, and terminates those measurement processes after sampling. It does not change system settings.
