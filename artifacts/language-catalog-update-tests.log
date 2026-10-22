@@ -1,0 +1,125 @@
+Building for debugging...
+[Computing dependencies]
+[Pre-planning 1 / 444]
+[Planning deferred tasks]
+[1 / 1]
+warning: missing creator for mutated node: ('/Users/lucatufariello/code/tCode/.build/out/Products/Debug/SwiftTerm_SwiftTerm.bundle/Contents/MacOS')
+[8 / 48] TCodeCore
+[10 / 46] TCodeCore
+[19 / 56] TCodeSyntaxProbe-product
+[23 / 60] TCodeSyntaxProbe-product
+[26 / 61] TCodeSyntax
+[35 / 68] TCode
+[35 / 68] TCodeCore
+[39 / 67] TCodeSyntax
+[42 / 73]
+[43 / 73]
+[44 / 73] TCodeSyntaxProbe-product
+[50 / 78] TCodeSyntaxService-product
+[62 / 78] TCodeCoreTests-product
+[65 / 83] TCodeSyntaxProbe-product
+[69 / 87] TCodeSyntaxService-product
+[70 / 88] TCodeSyntaxTests-product
+[72 / 91] tCode-product
+[72 / 91] TCodeCoreTests-product
+[74 / 91] TCodeCoreTests-product
+/Users/lucatufariello/code/tCode/Sources/TCode/LanguageSupportView.swift:289:82: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+ 266 |     let token = UUID()
+ 267 |     operationToken = token
+ 268 |     task = Task {
+     |                 |- note: 'self' implicitly strongly captured here
+     |                 `- note: add 'self' as a capture list item to silence
+ 269 |       defer {
+ 270 |         operation = nil
+     :
+ 287 |         for (index, plan) in selected.enumerated() {
+ 288 |           try Task.checkCancellation()
+ 289 |           _ = try await installer.install(plan, approval: { _ in true }) { [weak self] progress in
+     |                                                                                  |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+     |                                                                                  `- note: explicitly assign the capture list item to silence
+ 290 |             Task { @MainActor in
+ 291 |               guard self?.operationToken == token, self?.task?.isCancelled == false else { return }
+
+/Users/lucatufariello/code/tCode/Sources/TCode/LanguageSupportView.swift:300:60: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+ 266 |     let token = UUID()
+ 267 |     operationToken = token
+ 268 |     task = Task {
+     |                 |- note: 'self' implicitly strongly captured here
+     |                 `- note: add 'self' as a capture list item to silence
+ 269 |       defer {
+ 270 |         operation = nil
+     :
+ 298 |         try Task.checkCancellation()
+ 299 |         if includeGrammars, let plan = request.grammarPlan {
+ 300 |           try await grammarInstaller.install(plan) { [weak self] text in
+     |                                                            |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+     |                                                            `- note: explicitly assign the capture list item to silence
+ 301 |             Task { @MainActor in
+ 302 |               guard self?.operationToken == token, self?.task?.isCancelled == false else { return }
+
+[#ImplicitStrongCapture]: <https://docs.swift.org/compiler/documentation/diagnostics/implicit-strong-capture>
+[76 / 89] tCode-product
+/Users/lucatufariello/code/tCode/Sources/TCode/LanguageSupportView.swift:289:82: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+ 266 |     let token = UUID()
+ 267 |     operationToken = token
+ 268 |     task = Task {
+     |                 |- note: 'self' implicitly strongly captured here
+     |                 `- note: add 'self' as a capture list item to silence
+ 269 |       defer {
+ 270 |         operation = nil
+     :
+ 287 |         for (index, plan) in selected.enumerated() {
+ 288 |           try Task.checkCancellation()
+ 289 |           _ = try await installer.install(plan, approval: { _ in true }) { [weak self] progress in
+     |                                                                                  |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+     |                                                                                  `- note: explicitly assign the capture list item to silence
+ 290 |             Task { @MainActor in
+ 291 |               guard self?.operationToken == token, self?.task?.isCancelled == false else { return }
+
+/Users/lucatufariello/code/tCode/Sources/TCode/LanguageSupportView.swift:300:60: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+ 266 |     let token = UUID()
+ 267 |     operationToken = token
+ 268 |     task = Task {
+     |                 |- note: 'self' implicitly strongly captured here
+     |                 `- note: add 'self' as a capture list item to silence
+ 269 |       defer {
+ 270 |         operation = nil
+     :
+ 298 |         try Task.checkCancellation()
+ 299 |         if includeGrammars, let plan = request.grammarPlan {
+ 300 |           try await grammarInstaller.install(plan) { [weak self] text in
+     |                                                            |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+     |                                                            `- note: explicitly assign the capture list item to silence
+ 301 |             Task { @MainActor in
+ 302 |               guard self?.operationToken == token, self?.task?.isCancelled == false else { return }
+
+[#ImplicitStrongCapture]: <https://docs.swift.org/compiler/documentation/diagnostics/implicit-strong-capture>
+[80 / 91] TCode
+[80 / 91] tCode-product
+[84 / 90] TCodeEditorTests-product
+[87 / 91] TCodeEditorTests-product
+[89 / 91] TCodeEditorTests-product
+Build complete! (5,58 sec)
+Test Suite 'Selected tests' started at 2026-10-21 17:04:21.250.
+Test Suite 'TCodeSyntaxTests.xctest' started at 2026-10-21 17:04:21.257.
+Test Suite 'TCodeSyntaxTests.xctest' passed at 2026-10-21 17:04:21.257.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'Selected tests' passed at 2026-10-21 17:04:21.257.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.007) seconds
+Test Suite 'Selected tests' started at 2026-10-21 17:04:21.342.
+Test Suite 'TCodeEditorTests.xctest' started at 2026-10-21 17:04:21.349.
+Test Suite 'TCodeEditorTests.xctest' passed at 2026-10-21 17:04:21.349.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'Selected tests' passed at 2026-10-21 17:04:21.349.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.007) seconds
+Test Suite 'Selected tests' started at 2026-10-21 17:04:21.410.
+Test Suite 'TCodeCoreTests.xctest' started at 2026-10-21 17:04:21.417.
+Test Suite 'CatalogUpdateTests' started at 2026-10-21 17:04:21.417.
+Test Case '-[TCodeCoreTests.CatalogUpdateTests testPublishedPackCannotBeShadowedByOlderBundledConfiguration]' started.
+Test Case '-[TCodeCoreTests.CatalogUpdateTests testPublishedPackCannotBeShadowedByOlderBundledConfiguration]' passed (0.006 seconds).
+Test Suite 'CatalogUpdateTests' passed at 2026-10-21 17:04:21.423.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.006 (0.006) seconds
+Test Suite 'TCodeCoreTests.xctest' passed at 2026-10-21 17:04:21.423.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.006 (0.006) seconds
+Test Suite 'Selected tests' passed at 2026-10-21 17:04:21.423.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.006 (0.013) seconds

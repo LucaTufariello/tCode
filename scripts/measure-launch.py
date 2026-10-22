@@ -3,9 +3,11 @@
 Runs only a supplied fixture folder; language tools and tasks are not activated.
 """
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
+import plistlib
 import statistics
 import subprocess
 import tempfile
@@ -24,6 +26,7 @@ with tempfile.TemporaryDirectory(prefix='tcode-launch-') as directory:
         metric = Path(directory) / f'{index}.json'
         env = dict(os.environ, TCODE_METRICS_PATH=str(metric),
                    TCODE_LAUNCH_STARTED=str(time.time()),
+                   TCODE_SUPPORT_DIRECTORY=str(Path(directory) / 'Support'),
                    TCODE_RECOVERY_PATH=str(Path(directory) / 'Recovery'))
         process = subprocess.Popen([str(binary), str(args.workspace.resolve())], env=env,
                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -50,6 +53,8 @@ result = {
     'median_first_layout_ms': statistics.median(x['launch_to_first_layout_ms'] for x in measurements),
     'median_idle_rss_mib': statistics.median(x['idle_rss_mib'] for x in measurements),
     'workspace': str(args.workspace.resolve()),
+    'app_version': plistlib.loads((args.app.resolve() / 'Contents/Info.plist').read_bytes())['CFBundleShortVersionString'],
+    'executable_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
     'measurement': 'Warm process launch to first native window layout; RSS after 1 second; excludes tool processes and full document restoration/render latency',
 }
 args.output.parent.mkdir(parents=True, exist_ok=True)

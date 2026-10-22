@@ -1,0 +1,169 @@
+{
+  "associations" : [
+    {
+      "extensions" : [
+        "py",
+        "pyi"
+      ],
+      "filenames" : [
+
+      ],
+      "firstLinePattern" : "^#!.*\\bpython[0-9.]*\\b",
+      "grammarID" : "python",
+      "languageID" : "python"
+    }
+  ],
+  "debugger" : {
+    "adapterID" : "python",
+    "command" : {
+      "arguments" : [
+        "-m",
+        "debugpy.adapter"
+      ],
+      "environment" : {
+
+      },
+      "executable" : "${python}"
+    },
+    "launch" : {
+      "console" : "internalConsole",
+      "justMyCode" : true,
+      "program" : "${file}",
+      "python" : [
+        "${python}"
+      ]
+    }
+  },
+  "diagnosticAdapter" : "ruff",
+  "editor" : {
+    "lineComment" : "#",
+    "snippets" : [
+      {
+        "name" : "Function",
+        "text" : "def name():\n    pass\n"
+      },
+      {
+        "name" : "Main guard",
+        "text" : "if __name__ == \"__main__\":\n    main()\n"
+      }
+    ]
+  },
+  "formatterCommand" : {
+    "arguments" : [
+      "format",
+      "--stdin-filename",
+      "${file}",
+      "-"
+    ],
+    "environment" : {
+
+    },
+    "executable" : "ruff"
+  },
+  "id" : "python",
+  "interfaceVersion" : 2,
+  "languageServer" : {
+    "command" : {
+      "arguments" : [
+
+      ],
+      "environment" : {
+
+      },
+      "executable" : "pylsp"
+    },
+    "rootMarkers" : [
+
+    ],
+    "settings" : {
+      "pylsp" : {
+        "plugins" : {
+          "jedi" : {
+            "environment" : "${python}"
+          }
+        }
+      }
+    }
+  },
+  "name" : "Python",
+  "tasks" : {
+    "build" : {
+      "rootMarkers" : [
+
+      ],
+      "steps" : [
+        {
+          "arguments" : [
+            "-m",
+            "compileall",
+            "-q",
+            "."
+          ],
+          "environment" : {
+
+          },
+          "executable" : "${python}"
+        }
+      ]
+    },
+    "discoverTests" : {
+      "resultParser" : "pytest",
+      "rootMarkers" : [
+
+      ],
+      "steps" : [
+        {
+          "arguments" : [
+            "-m",
+            "pytest",
+            "--collect-only",
+            "-q"
+          ],
+          "environment" : {
+
+          },
+          "executable" : "${python}"
+        }
+      ]
+    },
+    "run" : {
+      "rootMarkers" : [
+
+      ],
+      "steps" : [
+        {
+          "arguments" : [
+            "${file}"
+          ],
+          "environment" : {
+
+          },
+          "executable" : "${python}"
+        }
+      ]
+    },
+    "test" : {
+      "resultParser" : "pytest",
+      "rootMarkers" : [
+
+      ],
+      "steps" : [
+        {
+          "arguments" : [
+            "-m",
+            "pytest",
+            "-v"
+          ],
+          "environment" : {
+
+          },
+          "executable" : "${python}"
+        }
+      ]
+    }
+  },
+  "toolRecipeIDs" : [
+    "python-tools"
+  ],
+  "version" : "2.0.0"
+}

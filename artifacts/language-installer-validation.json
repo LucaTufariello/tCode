@@ -1,0 +1,60 @@
+{
+  "validated": "2026-10-21",
+  "architecture": "arm64",
+  "functionalInstallerCatalogTestsPassed": 16,
+  "packRegistryTestsPassed": 16,
+  "rustIntegrationTestsPassed": 3,
+  "realDownloadTestsPassed": 2,
+  "focusedCasesPassed": 37,
+  "failures": 0,
+  "skips": 0,
+  "method": "Current main Swift package compiled and tested with TCODE_INTEGRATION=1 TCODE_DOWNLOAD_INTEGRATION=1; focused XCTest filter LanguagePackTests|LanguageCatalogInstallerTests|RustIntegrationTests. Actual pinned public downloads, SHA-256 and arm64 verification, real executable health probes, isolated pip --no-index --no-deps and pip check, real Cargo/rustfmt/rust-analyzer/LLDB.",
+  "log": "artifacts/language-core-final-tests.log",
+  "recipes": [
+    {
+      "downloadBytes": 14071674,
+      "elapsedSeconds": 1.4631919860839844,
+      "installedBytes": 38205764,
+      "recipeID": "rust-analyzer",
+      "version": "2026-10-19"
+    },
+    {
+      "downloadBytes": 21658368,
+      "elapsedSeconds": 8.734665989875793,
+      "installedBytes": 92770727,
+      "recipeID": "python-tools",
+      "version": "2026.10.21"
+    }
+  ],
+  "remoteTCatalogPublished": false,
+  "coveredSafetyCases": [
+    "No execution during import",
+    "Sparse128MiB config size preflight",
+    "Corrupt and unsupported packs preserve active support",
+    "Versioned hash-checked history survives restart and removes without resurrection",
+    "History bounded to16recent plusactive",
+    "Hash and catalog identity/version agreement",
+    "Canonical curated GitHub release URLs",
+    "Tar parent traversal and symlink rejection",
+    "Per-recipe owned receipt removal retains unowned and external resources",
+    "Cross-recipe and symlink receipt rejection",
+    "Failed and cancelled updates retain previous working receipt",
+    "Cancellation at activation cannot commit",
+    "A timed-out version probe exiting0 is not healthy"
+  ],
+  "rustEvidence": {
+    "cargo": "build/run/test passed; one test passes",
+    "rustfmt": "stdin formatting passed",
+    "rustAnalyzer": {
+      "definitions": 1,
+      "completionItems": 36,
+      "diagnostics": 6
+    },
+    "lldb": {
+      "verifiedSourceBreakpoint": true,
+      "answer": "42",
+      "sourcePath": "POSIX physical path handles /var versus /private/var DWARF canonicalization"
+    }
+  },
+  "downloadBound": "Declared exact tool-download byte cap enforced during transfer; size and SHA-256 checked before activation. Catalog and pack downloads are separately bounded on disk before decoding."
+}

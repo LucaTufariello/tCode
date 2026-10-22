@@ -1,0 +1,74 @@
+Building for debugging...
+[Computing dependencies]
+[Pre-planning 1 / 444]
+[Planning deferred tasks]
+[7 / 54] TCodeCore
+[7 / 60]
+warning: missing creator for mutated node: ('/Users/lucatufariello/code/tCode/.build/out/Products/Debug/SwiftTerm_SwiftTerm.bundle/Contents/MacOS')
+[12 / 63] CTreeSitter
+[15 / 64] SwiftTerm
+In file included from /Users/lucatufariello/code/tCode/Sources/CTreeSitter/runtime/lib.c:6:
+/Users/lucatufariello/code/tCode/Sources/CTreeSitter/runtime/./parser.c:403:7: warning: implicit conversion loses integer precision: 'uintptr_t' (aka 'unsigned long') to 'uint32_t' (aka 'unsigned int') [-Wshorten-64-to-32]
+  401 |     length = ts_wasm_store_call_scanner_serialize(
+      |              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  402 |       self->wasm_store,
+  403 |       (uintptr_t)self->external_scanner_payload,
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/lucatufariello/code/tCode/Sources/CTreeSitter/runtime/./parser.c:433:7: warning: implicit conversion loses integer precision: 'uintptr_t' (aka 'unsigned long') to 'uint32_t' (aka 'unsigned int') [-Wshorten-64-to-32]
+  431 |     ts_wasm_store_call_scanner_deserialize(
+      |     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  432 |       self->wasm_store,
+  433 |       (uintptr_t)self->external_scanner_payload,
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/lucatufariello/code/tCode/Sources/CTreeSitter/runtime/./parser.c:456:7: warning: implicit conversion loses integer precision: 'uintptr_t' (aka 'unsigned long') to 'uint32_t' (aka 'unsigned int') [-Wshorten-64-to-32]
+  454 |     bool result = ts_wasm_store_call_scanner_scan(
+      |                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  455 |       self->wasm_store,
+  456 |       (uintptr_t)self->external_scanner_payload,
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+3 warnings generated.
+[16 / 65] CTreeSitter
+[20 / 68] TCodeCore
+[25 / 66] TCodeSyntax
+[30 / 70] TCodeCoreTests-product
+[32 / 75] TCodeSyntax
+[36 / 72] TCodeSyntaxService-product
+[41 / 75] TCodeSyntaxService-product
+[42 / 75]
+[49 / 78] TCodeSyntaxTests-product
+[54 / 78] TCodeSyntaxTests-product
+[58 / 79] TCodeCoreTests-product
+[60 / 79] TCodeSyntaxTests-product
+[64 / 84] TCodeCoreTests-product
+[66 / 82] SwiftTerm
+Build complete! (3,19 sec)
+Test Suite 'Selected tests' started at 2026-10-21 17:08:01.296.
+Test Suite 'TCodeSyntaxTests.xctest' started at 2026-10-21 17:08:01.303.
+Test Suite 'TCodeSyntaxTests.xctest' passed at 2026-10-21 17:08:01.303.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'Selected tests' passed at 2026-10-21 17:08:01.303.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.007) seconds
+Test Suite 'Selected tests' started at 2026-10-21 17:08:01.388.
+Test Suite 'TCodeEditorTests.xctest' started at 2026-10-21 17:08:01.394.
+Test Suite 'TCodeEditorTests.xctest' passed at 2026-10-21 17:08:01.394.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'Selected tests' passed at 2026-10-21 17:08:01.394.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.007) seconds
+Test Suite 'Selected tests' started at 2026-10-21 17:08:01.455.
+Test Suite 'TCodeCoreTests.xctest' started at 2026-10-21 17:08:01.461.
+Test Suite 'MigratedPackWorkflowTests' started at 2026-10-21 17:08:01.461.
+Test Case '-[TCodeCoreTests.MigratedPackWorkflowTests testMigratedCPPConfigureBuildCTestBinaryAndClangFormat]' started.
+Test Case '-[TCodeCoreTests.MigratedPackWorkflowTests testMigratedCPPConfigureBuildCTestBinaryAndClangFormat]' passed (2.939 seconds).
+Test Case '-[TCodeCoreTests.MigratedPackWorkflowTests testMigratedPythonBuildRunPytestAndRuffFormat]' started.
+Test Case '-[TCodeCoreTests.MigratedPackWorkflowTests testMigratedPythonBuildRunPytestAndRuffFormat]' passed (0.677 seconds).
+Test Case '-[TCodeCoreTests.MigratedPackWorkflowTests testMigratedSwiftPMBuildRunTestAndSwiftFormat]' started.
+Test Case '-[TCodeCoreTests.MigratedPackWorkflowTests testMigratedSwiftPMBuildRunTestAndSwiftFormat]' passed (15.068 seconds).
+Test Suite 'MigratedPackWorkflowTests' passed at 2026-10-21 17:08:20.146.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 18.684 (18.685) seconds
+Test Suite 'TCodeCoreTests.xctest' passed at 2026-10-21 17:08:20.146.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 18.684 (18.685) seconds
+Test Suite 'Selected tests' passed at 2026-10-21 17:08:20.146.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 18.684 (18.691) seconds
+VERIFIED migrated C/C++ v2 pack: CMake configure/build/compile_commands, CTest/discovery, binary run=42, clang-format stdin
+VERIFIED migrated Python v2 pack: compileall, run=42, pytest, discovery, Ruff stdin format
+VERIFIED migrated Swift v2 pack: SwiftPM build/run=42/test/discovery, swift-format stdin

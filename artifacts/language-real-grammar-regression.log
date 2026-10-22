@@ -1,0 +1,60 @@
+Building for debugging...
+[Computing dependencies]
+[8 / 49] CTreeSitter
+[11 / 50] SwiftTerm
+In file included from /Users/lucatufariello/code/tCode/Sources/CTreeSitter/runtime/lib.c:6:
+/Users/lucatufariello/code/tCode/Sources/CTreeSitter/runtime/./parser.c:403:7: warning: implicit conversion loses integer precision: 'uintptr_t' (aka 'unsigned long') to 'uint32_t' (aka 'unsigned int') [-Wshorten-64-to-32]
+  401 |     length = ts_wasm_store_call_scanner_serialize(
+      |              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  402 |       self->wasm_store,
+  403 |       (uintptr_t)self->external_scanner_payload,
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/lucatufariello/code/tCode/Sources/CTreeSitter/runtime/./parser.c:433:7: warning: implicit conversion loses integer precision: 'uintptr_t' (aka 'unsigned long') to 'uint32_t' (aka 'unsigned int') [-Wshorten-64-to-32]
+  431 |     ts_wasm_store_call_scanner_deserialize(
+      |     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  432 |       self->wasm_store,
+  433 |       (uintptr_t)self->external_scanner_payload,
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/lucatufariello/code/tCode/Sources/CTreeSitter/runtime/./parser.c:456:7: warning: implicit conversion loses integer precision: 'uintptr_t' (aka 'unsigned long') to 'uint32_t' (aka 'unsigned int') [-Wshorten-64-to-32]
+  454 |     bool result = ts_wasm_store_call_scanner_scan(
+      |                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  455 |       self->wasm_store,
+  456 |       (uintptr_t)self->external_scanner_payload,
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+3 warnings generated.
+[12 / 51] CTreeSitter
+[13 / 51] TCodeCore
+[16 / 50] TCodeSyntax
+[21 / 52] TCodeSyntax
+[26 / 51] TCodeSyntax
+[29 / 51] TCodeSyntaxTests-product
+[33 / 57]
+[34 / 57] TCodeSyntaxService-product
+[39 / 58] TCodeSyntaxTests-product
+[41 / 58] TCodeSyntaxTests-product
+[45 / 61] SwiftTerm
+warning: missing creator for mutated node: ('/Users/lucatufariello/code/tCode/.build/out/Products/Debug/SwiftTerm_SwiftTerm.bundle/Contents/MacOS')
+Build complete! (2,59 sec)
+Test Suite 'Selected tests' started at 2026-10-21 17:11:15.175.
+Test Suite 'TCodeSyntaxTests.xctest' started at 2026-10-21 17:11:15.181.
+Test Suite 'SyntaxTests' started at 2026-10-21 17:11:15.182.
+Test Case '-[TCodeSyntaxTests.SyntaxTests testRealGrammarsAndIncrementalUnicode]' started.
+Test Case '-[TCodeSyntaxTests.SyntaxTests testRealGrammarsAndIncrementalUnicode]' passed (1.158 seconds).
+Test Suite 'SyntaxTests' passed at 2026-10-21 17:11:16.340.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.158 (1.159) seconds
+Test Suite 'TCodeSyntaxTests.xctest' passed at 2026-10-21 17:11:16.340.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.158 (1.159) seconds
+Test Suite 'Selected tests' passed at 2026-10-21 17:11:16.340.
+	 Executed 1 test, with 0 failures (0 unexpected) in 1.158 (1.165) seconds
+Test Suite 'Selected tests' started at 2026-10-21 17:11:16.433.
+Test Suite 'TCodeEditorTests.xctest' started at 2026-10-21 17:11:16.440.
+Test Suite 'TCodeEditorTests.xctest' passed at 2026-10-21 17:11:16.440.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'Selected tests' passed at 2026-10-21 17:11:16.440.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.007) seconds
+Test Suite 'Selected tests' started at 2026-10-21 17:11:16.525.
+Test Suite 'TCodeCoreTests.xctest' started at 2026-10-21 17:11:16.531.
+Test Suite 'TCodeCoreTests.xctest' passed at 2026-10-21 17:11:16.531.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'Selected tests' passed at 2026-10-21 17:11:16.532.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.007) seconds

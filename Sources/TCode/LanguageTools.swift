@@ -1,28 +1,6 @@
 import AppKit
 import TCodeCore
 
-struct LanguagePack: Codable {
-  let interfaceVersion: Int
-  let id: String
-  let name: String
-  let extensions: [String]
-  let server: String
-  let serverArguments: [String]
-  let formatter: String
-  let adapter: String
-  static func discover() -> [LanguagePack] {
-    guard let folder = Bundle.module.url(forResource: "Resources", withExtension: nil) else {
-      return []
-    }
-    return
-      ((try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil))
-      ?? []).filter { $0.pathExtension == "json" }.compactMap {
-        try? JSONDecoder().decode(Self.self, from: Data(contentsOf: $0))
-      }.filter { $0.interfaceVersion == 1 }
-  }
-  var enabled: Bool { !UserDefaults.standard.bool(forKey: "disabled." + id) }
-}
-
 @MainActor final class LanguageSession {
   let pack: LanguagePack
   let connection = ProtocolConnection(kind: .lsp)
@@ -42,9 +20,15 @@ struct LanguagePack: Codable {
   var applyEdit: (([String: Any], String) async throws -> Bool)?
   init(pack: LanguagePack) { self.pack = pack }
   func start(root: URL, pythonInterpreter: String? = nil) async throws {
-    guard let path = ToolLocator.find(pack.server, root: root) else {
+    guard let server = pack.languageServer else {
+      throw TCodeError.message("\(pack.name) does not configure a language server.")
+    }
+    let context = LanguageRuntime.context(
+      root: root, file: root.appendingPathComponent("untitled"), python: pythonInterpreter)
+    let command = try server.command.resolved(context)
+    guard let path = ToolLocator.find(command.executable, root: root) else {
       throw TCodeError.message(
-        "\(pack.name): \(pack.server) is missing. Configure it in Language Tools settings.")
+        "\(pack.name): \(pack.server) is missing. Configure it in Settings → Language Support.")
     }
     await connection.handlers(
       event: { [weak self] message in
@@ -66,23 +50,46 @@ struct LanguagePack: Codable {
         }
       }, log: { [weak self] text in await MainActor.run { self?.log?(text) } },
       serverRequest: { [weak self] message in
-        guard let self, let edit = (message["params"] as? [String: Any])?["edit"] as? [String: Any],
+        guard let self else { return NSNull() }
+        let method = message["method"] as? String
+        if method == "workspace/workspaceFolders" {
+          return [["uri": root.absoluteString, "name": root.lastPathComponent]]
+        }
+        if method == "workspace/configuration" {
+          let values = (try server.settings?.expanding(context).foundation) as? [String: Any] ?? [:]
+          let initial =
+            (try server.initializationOptions?.expanding(context).foundation) as? [String: Any]
+            ?? [:]
+          let items = (message["params"] as? [String: Any])?["items"] as? [[String: Any]] ?? []
+          return items.map { item -> Any in
+            guard let section = item["section"] as? String, !section.isEmpty else { return values }
+            if values.isEmpty, section == self.pack.server || section == self.pack.id {
+              return initial
+            }
+            var selected: Any = values
+            for piece in section.split(separator: ".") {
+              selected = (selected as? [String: Any])?[String(piece)] ?? NSNull()
+            }
+            return selected
+          }
+        }
+        guard let edit = (message["params"] as? [String: Any])?["edit"] as? [String: Any],
           let apply = await self.applyEdit
         else { return ["applied": false] }
         return ["applied": try await apply(edit, self.encoding)]
       })
-    var arguments = pack.serverArguments
-    let buildDatabase = root.appendingPathComponent("build/compile_commands.json")
-    if pack.id == "cpp", FileManager.default.fileExists(atPath: buildDatabase.path) {
-      arguments.append("--compile-commands-dir=" + buildDatabase.deletingLastPathComponent().path)
-    }
-    try await connection.start(path: path, arguments: arguments, directory: root)
+    try await connection.start(
+      path: path, arguments: command.arguments,
+      directory: command.workingDirectory.map {
+        URL(fileURLWithPath: $0, relativeTo: root).standardizedFileURL
+      } ?? root,
+      environment: command.environment)
     let result = try await connection.request(
       "initialize",
       params: [
         "processId": ProcessInfo.processInfo.processIdentifier, "rootUri": root.absoluteString,
         "workspaceFolders": [["uri": root.absoluteString, "name": root.lastPathComponent]],
-        "clientInfo": ["name": "tCode", "version": "0.1"],
+        "clientInfo": ["name": "tCode", "version": "0.2"],
         "capabilities": [
           "general": ["positionEncodings": ["utf-16", "utf-8"]],
           "textDocument": [
@@ -93,7 +100,9 @@ struct LanguagePack: Codable {
           "workspace": [
             "applyEdit": true, "workspaceEdit": ["documentChanges": true], "configuration": true,
           ],
-        ], "initializationOptions": [:],
+        ],
+        "initializationOptions": try server.initializationOptions?.expanding(context).foundation
+          ?? [:],
       ], timeout: 30)
     capabilities = (result["result"] as? [String: Any])?["capabilities"] as? [String: Any] ?? [:]
     encoding = capabilities["positionEncoding"] as? String ?? "utf-16"
@@ -103,10 +112,10 @@ struct LanguagePack: Codable {
     try await connection.notify("initialized")
     ready = true
     log?("\(pack.name) ready (\(encoding))\n")
-    if pack.id == "python", let pythonInterpreter {
+    if let settings = server.settings {
       try await connection.notify(
         "workspace/didChangeConfiguration",
-        params: ["settings": ["pylsp": ["plugins": ["jedi": ["environment": pythonInterpreter]]]]])
+        params: ["settings": try settings.expanding(context).foundation])
     }
   }
   func open(_ document: CodeDocument) async throws {
@@ -117,7 +126,8 @@ struct LanguagePack: Codable {
       "textDocument/didOpen",
       params: [
         "textDocument": [
-          "uri": url.absoluteString, "languageId": pack.id, "version": document.version,
+          "uri": url.absoluteString, "languageId": document.languageID ?? pack.id,
+          "version": document.version,
           "text": document.text,
         ]
       ])
@@ -135,7 +145,9 @@ struct LanguagePack: Codable {
     }
   }
   func lint(_ document: CodeDocument) {
-    guard pack.id == "python", let path = ToolLocator.find("ruff"), let url = document.url else {
+    guard pack.diagnosticAdapter == "ruff", let path = ToolLocator.find("ruff"),
+      let url = document.url
+    else {
       return
     }
     lintTasks[document.id]?.cancel()

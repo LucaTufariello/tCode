@@ -1,0 +1,141 @@
+{
+  "associations" : [
+    {
+      "extensions" : [
+        "swift"
+      ],
+      "filenames" : [
+
+      ],
+      "grammarID" : "swift",
+      "languageID" : "swift"
+    }
+  ],
+  "debugger" : {
+    "adapterID" : "lldb",
+    "command" : {
+      "arguments" : [
+
+      ],
+      "environment" : {
+
+      },
+      "executable" : "lldb-dap"
+    },
+    "launch" : {
+
+    }
+  },
+  "editor" : {
+    "lineComment" : "//",
+    "snippets" : [
+      {
+        "name" : "Function",
+        "text" : "func name() {\n    \n}\n"
+      },
+      {
+        "name" : "Section",
+        "text" : "// MARK: - \n"
+      }
+    ]
+  },
+  "formatterCommand" : {
+    "arguments" : [
+      "format"
+    ],
+    "environment" : {
+
+    },
+    "executable" : "swift-format"
+  },
+  "id" : "swift",
+  "interfaceVersion" : 2,
+  "languageServer" : {
+    "command" : {
+      "arguments" : [
+
+      ],
+      "environment" : {
+
+      },
+      "executable" : "sourcekit-lsp"
+    },
+    "rootMarkers" : [
+      "Package.swift"
+    ]
+  },
+  "name" : "Swift",
+  "tasks" : {
+    "build" : {
+      "rootMarkers" : [
+        "Package.swift"
+      ],
+      "steps" : [
+        {
+          "arguments" : [
+            "build"
+          ],
+          "environment" : {
+
+          },
+          "executable" : "swift"
+        }
+      ]
+    },
+    "discoverTests" : {
+      "resultParser" : "swift",
+      "rootMarkers" : [
+        "Package.swift"
+      ],
+      "steps" : [
+        {
+          "arguments" : [
+            "test",
+            "list"
+          ],
+          "environment" : {
+
+          },
+          "executable" : "swift"
+        }
+      ]
+    },
+    "run" : {
+      "rootMarkers" : [
+        "Package.swift"
+      ],
+      "steps" : [
+        {
+          "arguments" : [
+            "run"
+          ],
+          "environment" : {
+
+          },
+          "executable" : "swift"
+        }
+      ]
+    },
+    "test" : {
+      "resultParser" : "swift",
+      "rootMarkers" : [
+        "Package.swift"
+      ],
+      "steps" : [
+        {
+          "arguments" : [
+            "test"
+          ],
+          "environment" : {
+
+          },
+          "executable" : "swift"
+        }
+      ]
+    }
+  },
+  "toolRecipeIDs" : [
+    "xcode-tools"
+  ],
+  "version" : "2.0.0"
+}

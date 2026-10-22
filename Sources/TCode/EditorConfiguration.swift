@@ -6,8 +6,12 @@ struct EditorConfiguration {
   var useTabs = false
   var wrap = true
   var exclusions = FileIO.exclusions
-  static func load(root: URL?, file: URL?) -> Self {
+  static func load(root: URL?, file: URL?, languageDefaults: LanguageEditorConfiguration? = nil)
+    -> Self
+  {
     var result = Self()
+    if let size = languageDefaults?.indentSize { result.indentSize = size }
+    if let tabs = languageDefaults?.useTabs { result.useTabs = tabs }
     let global = UserDefaults.standard.integer(forKey: "indentWidth")
     if global > 0 { result.indentSize = global }
     if let names = UserDefaults.standard.stringArray(forKey: "exclusions") {

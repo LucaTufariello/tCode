@@ -1,0 +1,82 @@
+[
+  {
+    "descriptor": {
+      "id": "python",
+      "version": "0.25.0",
+      "symbol": "tree_sitter_python",
+      "moduleSHA256": "276d00830b90b0b5801e3540ea329cad2c30fb0f7b55bddce44d918fa00ae229",
+      "querySHA256": "8fd64722ef36d4a73cd795fecbc28cf434b75258e32af32d7a0ef2ef8cb2d70f",
+      "sourceRevision": "293fdc02038ee2bf0e2e206711b69c90ac0d413f",
+      "abi": 15,
+      "module": "grammar.dylib",
+      "query": "highlights.scm"
+    },
+    "url": "https://github.com/LucaTufariello/tCode/releases/download/language-grammars-v1/python-0.25.0-macos27-arm64.tar.gz",
+    "sha256": "314d2392e54a2f50bb3a35ae308b73b6106fc015335e6391164fd2ac7279a661",
+    "downloadBytes": 66862
+  },
+  {
+    "descriptor": {
+      "id": "rust",
+      "version": "0.24.0",
+      "symbol": "tree_sitter_rust",
+      "moduleSHA256": "4a5ff90b1282f6bae989e19ac946da96f87faa6a816fc9a752b712856ad5bfe1",
+      "querySHA256": "0a9bba8e91094f1eb9200896eb042defb5330801fbcbf005b84c42c14c14b7c4",
+      "sourceRevision": "18b0515fca567f5a10aee9978c6d2640e878671a",
+      "abi": 15,
+      "module": "grammar.dylib",
+      "query": "highlights.scm"
+    },
+    "url": "https://github.com/LucaTufariello/tCode/releases/download/language-grammars-v1/rust-0.24.0-macos27-arm64.tar.gz",
+    "sha256": "bad19ae34078170a18eb0dbaa98ef3633cf3122e6a7f6d8d35b73eaf4b258289",
+    "downloadBytes": 120647
+  },
+  {
+    "descriptor": {
+      "id": "c",
+      "version": "0.24.1",
+      "symbol": "tree_sitter_c",
+      "moduleSHA256": "9a8cb4445ad6720a876c7ca64bb41743e9548f328a049ac59e5ab6f62773b9aa",
+      "querySHA256": "6a9dd7ed7abcf391d0610a29077ba83472c2171631f33efaa329d7ec6ace52fc",
+      "sourceRevision": "7fa1be1b694b6e763686793d97da01f36a0e5c12",
+      "abi": 15,
+      "module": "grammar.dylib",
+      "query": "highlights.scm"
+    },
+    "url": "https://github.com/LucaTufariello/tCode/releases/download/language-grammars-v1/c-0.24.1-macos27-arm64.tar.gz",
+    "sha256": "c52753547d6ad92481f7424cfc5dc20934fbca5dc27d6f8f61ac6647201f1bb3",
+    "downloadBytes": 75852
+  },
+  {
+    "descriptor": {
+      "id": "cpp",
+      "version": "0.23.4",
+      "symbol": "tree_sitter_cpp",
+      "moduleSHA256": "9884875d5dc76443af1783880bc523d2c64ff7d11412b3a77d72b23cecc920bd",
+      "querySHA256": "b688d708e7c1a8315a4de205885c5cd950a1eaa000a808cdc5f39b2f3085ee38",
+      "sourceRevision": "f41e1a044c8a84ea9fa8577fdd2eab92ec96de02",
+      "abi": 14,
+      "module": "grammar.dylib",
+      "query": "highlights.scm"
+    },
+    "url": "https://github.com/LucaTufariello/tCode/releases/download/language-grammars-v1/cpp-0.23.4-macos27-arm64.tar.gz",
+    "sha256": "02983f8bad1ee116b1a1a0863d4c341ef4294f6c11e02798e60e26ce397fbf91",
+    "downloadBytes": 283932
+  },
+  {
+    "descriptor": {
+      "id": "swift",
+      "version": "0.7.4",
+      "symbol": "tree_sitter_swift",
+      "moduleSHA256": "8b21bf50ad3a2657b8d9a2905d045efb0cade726b9d493eca5ef28c45e165c20",
+      "querySHA256": "0e5f468df3de8df2fb148fbdd5d61db80725fb58bc16174730cb4dbc31e48be1",
+      "sourceRevision": "82bb3a533e0801fd2bbaa11dc49676e10bf41948",
+      "abi": 14,
+      "module": "grammar.dylib",
+      "query": "highlights.scm"
+    },
+    "url": "https://github.com/LucaTufariello/tCode/releases/download/language-grammars-v1/swift-0.7.4-macos27-arm64.tar.gz",
+    "sha256": "4fec43cf6c1932b06ad934f13c1cb2aaaaf324d936d1a93d367804d352d7989f",
+    "downloadBytes": 377199
+  }
+]

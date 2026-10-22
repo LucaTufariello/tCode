@@ -15,104 +15,90 @@ extension WorkspaceWindow {
       status.stringValue = "Save modified buffers before running a task (File → Save All)."
       return
     }
-    let ext = active?.url?.pathExtension ?? ""
-    let executable: String
-    let arguments: [String]
-    let python =
-      configuration.python.isEmpty
-      ? ToolLocator.find("python3", root: root) ?? "/usr/bin/python3" : configuration.python
-    if action == "run" && !configuration.executable.isEmpty {
-      executable =
+    let task: LanguageTask
+    if action == "run", !configuration.executable.isEmpty {
+      let executable =
         configuration.executable.hasPrefix("/")
         ? configuration.executable : root.appendingPathComponent(configuration.executable).path
-      arguments = configuration.arguments
-    } else if ext == "py" {
-      executable = python
-      arguments =
-        action == "run"
-        ? [active?.url?.path ?? ""]
-        : action == "build"
-          ? ["-m", "compileall", "-q", "."]
-          : action == "discoverTests"
-            ? ["-m", "pytest", "--collect-only", "-q"] : ["-m", "pytest", "-v"]
-    } else if FileManager.default.fileExists(
-      atPath: root.appendingPathComponent("Package.swift").path)
-    {
-      executable = ToolLocator.find("swift") ?? "/usr/bin/swift"
-      arguments =
-        action == "build"
-        ? ["build"]
-        : action == "run" ? ["run"] : action == "discoverTests" ? ["test", "list"] : ["test"]
-    } else if FileManager.default.fileExists(
-      atPath: root.appendingPathComponent("CMakeLists.txt").path)
-    {
-      if action == "run" {
-        editConfiguration()
+      task = .init(steps: [.init(executable: executable, arguments: configuration.arguments)])
+    } else {
+      let current = active.flatMap { recognizeLanguage($0)?.pack }
+      func available(_ task: LanguageTask) -> Bool {
+        task.rootMarkers.isEmpty
+          || task.rootMarkers.contains {
+            FileManager.default.fileExists(atPath: root.appendingPathComponent($0).path)
+          }
+      }
+      let candidates = packs.compactMap { pack -> LanguageTask? in
+        guard pack.enabled, let task = pack.tasks[action], !task.rootMarkers.isEmpty,
+          available(task)
+        else { return nil }
+        return task
+      }
+      if let selected = current?.tasks[action], available(selected) {
+        task = selected
+      } else if candidates.count == 1 {
+        task = candidates[0]
+      } else {
+        status.stringValue =
+          candidates.count > 1
+          ? "Multiple task providers match. Select a source file or configure Run."
+          : "This language pack has no matching \(action) task. Configure Run or install language support."
         return
       }
-      executable =
-        ToolLocator.find(action == "test" || action == "discoverTests" ? "ctest" : "cmake")
-        ?? "/opt/homebrew/bin/cmake"
-      arguments =
-        action == "build"
-        ? ["--build", "build"]
-        : action == "discoverTests"
-          ? ["--test-dir", "build", "-N"] : ["--test-dir", "build", "--output-on-failure"]
-    } else {
-      editConfiguration()
-      return
     }
-    let directory =
+    let context = LanguageRuntime.context(
+      root: root, file: active?.url,
+      python: configuration.python.isEmpty ? nil : configuration.python)
+    let baseDirectory =
       configuration.workingDirectory.isEmpty
       ? root
       : URL(fileURLWithPath: configuration.workingDirectory, relativeTo: root).standardizedFileURL
     showBottom(2)
-    appendOutput("\n› \(executable) \(arguments.joined(separator:" "))\n")
-    let process = RunningProcess()
-    taskProcess = process
     taskHandle = Task { [weak self] in
       guard let self else { return }
-      let start = Date()
+      let started = Date()
       defer {
         self.taskHandle = nil
         self.taskProcess = nil
       }
       do {
-        if action == "build",
-          FileManager.default.fileExists(atPath: root.appendingPathComponent("CMakeLists.txt").path)
-        {
-          let configureProcess = RunningProcess()
-          self.taskProcess = configureProcess
-          let configure = try await configureProcess.run(
-            executable: executable,
-            arguments: [
-              "-S", ".", "-B", "build", "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
-              "-DCMAKE_BUILD_TYPE=Debug",
-            ], directory: root,
+        var resultText = ""
+        for definition in task.steps {
+          try Task.checkCancellation()
+          let command = try definition.resolved(context)
+          guard let executable = ToolLocator.find(command.executable, root: root) else {
+            throw TCodeError.message(
+              "Missing task tool: \(command.executable). Open Settings → Language Support.")
+          }
+          let directory =
+            command.workingDirectory.map {
+              URL(fileURLWithPath: $0, relativeTo: root).standardizedFileURL
+            } ?? baseDirectory
+          self.appendOutput("\n› \(executable) \(command.arguments.joined(separator: " "))\n")
+          let process = RunningProcess()
+          self.taskProcess = process
+          let result = try await process.run(
+            executable: executable, arguments: command.arguments, directory: directory,
+            environment: command.environment.merging(configuration.environment) { _, user in user },
             output: { [weak self] text in Task { @MainActor in self?.appendOutput(text) } })
-          if configure.status != 0 {
-            throw TCodeError.message("CMake configuration failed. See Build Output.")
+          try Task.checkCancellation()
+          resultText += result.output
+          self.appendOutput("\nExited \(result.status)\n")
+          guard result.status == 0 else {
+            throw TCodeError.message(
+              "\(action.capitalized) exited \(result.status). See Build Output.")
           }
         }
-        self.taskProcess = process
-        try Task.checkCancellation()
-        let result = try await process.run(
-          executable: executable, arguments: arguments, directory: directory,
-          environment: configuration.environment,
-          output: { [weak self] text in Task { @MainActor in self?.appendOutput(text) } })
-        self.appendOutput(
-          "\nExited \(result.status) · \(String(format:"%.2f",Date().timeIntervalSince(start))) s\n"
-        )
-        self.status.stringValue = "\(action.capitalized) exited \(result.status)"
-        if action == "discoverTests" || action == "test" {
-          let runner =
-            ext == "py"
-            ? "pytest"
-            : FileManager.default.fileExists(
-              atPath: root.appendingPathComponent("Package.swift").path) ? "swift" : "ctest"
-          await self.showTestResults(TestReports.parse(result.output, runner: runner), root: root)
+        self.status.stringValue =
+          "\(action.capitalized) completed in \(String(format: "%.2f", Date().timeIntervalSince(started))) s"
+        if ["test", "discoverTests"].contains(action), let parser = task.resultParser {
+          await self.showTestResults(TestReports.parse(resultText, runner: parser), root: root)
         }
-      } catch { self.appendOutput("\n\(error.localizedDescription)\n") }
+      } catch is CancellationError { self.appendOutput("\nTask cancelled.\n") } catch {
+        self.status.stringValue = error.localizedDescription
+        self.appendOutput("\n" + error.localizedDescription + "\n")
+      }
     }
   }
   func editConfiguration() {
@@ -280,30 +266,50 @@ extension WorkspaceWindow {
       status.stringValue = "Save the file before debugging"
       return
     }
-    let python = doc.url?.pathExtension == "py"
-    let program =
-      configuration.debugProgram.isEmpty
-      ? (python ? doc.url?.path : nil)
-      : (configuration.debugProgram.hasPrefix("/")
-        ? configuration.debugProgram : root.appendingPathComponent(configuration.debugProgram).path)
-    guard let program else {
+    guard let debug = recognizeLanguage(doc)?.pack.debugger else {
+      status.stringValue = "This language pack does not configure a debugger."
+      return
+    }
+    let program: String
+    if !configuration.debugProgram.isEmpty {
+      program =
+        configuration.debugProgram.hasPrefix("/")
+        ? configuration.debugProgram : root.appendingPathComponent(configuration.debugProgram).path
+    } else if case .string(let template) = debug.launch["program"] {
+      do {
+        program = try LanguageCommand.expand(
+          template, context: LanguageRuntime.context(root: root, file: doc.url))
+      } catch {
+        report(error)
+        return
+      }
+    } else {
       editConfiguration()
       return
     }
     guard FileManager.default.fileExists(atPath: program) else {
       report(
         TCodeError.message(
-          "Debug program is missing: \(program). Build the target, then update Run Configuration if needed."
-        ))
+          "Debug program is missing: \(program). Build the target, then update Run Configuration."))
       return
     }
-    guard
-      let adapter = python
-        ? (configuration.python.isEmpty
-          ? ToolLocator.find("python3", root: root) : configuration.python)
-        : ToolLocator.find("lldb-dap", root: root)
-    else {
-      report(TCodeError.message("Debug adapter is missing. Configure its path in Settings."))
+    let context = LanguageRuntime.context(
+      root: root, file: doc.url, python: configuration.python.isEmpty ? nil : configuration.python,
+      program: program)
+    let adapterCommand: LanguageCommand
+    let launch: [String: Any]
+    do {
+      adapterCommand = try debug.command.resolved(context)
+      launch = try debug.launch.mapValues { try $0.expanding(context).foundation }
+    } catch {
+      report(error)
+      return
+    }
+    guard let adapter = ToolLocator.find(adapterCommand.executable, root: root) else {
+      report(
+        TCodeError.message(
+          "Debug adapter \(adapterCommand.executable) is missing. Open Settings → Language Support."
+        ))
       return
     }
     debugSession?.stop()
@@ -322,9 +328,10 @@ extension WorkspaceWindow {
     Task {
       do {
         try await session.start(
-          adapter: adapter, arguments: python ? ["-m", "debugpy.adapter"] : [], program: program,
-          python: python, root: directory, breakpoints: breakpoints,
-          programArguments: configuration.arguments, environment: configuration.environment)
+          adapter: adapter, arguments: adapterCommand.arguments, program: program,
+          root: directory, breakpoints: breakpoints,
+          programArguments: configuration.arguments, environment: configuration.environment,
+          adapterID: debug.adapterID, launchOptions: launch)
       } catch {
         report(error)
         session.stop()
@@ -394,11 +401,12 @@ extension WorkspaceWindow {
           )
         }
         if let symbol = entry.symbol {
-          for file in files where file.pathExtension == "swift" {
+          for file in files where ["swift", "rs"].contains(file.pathExtension) {
             guard let text = try? String(contentsOf: file, encoding: .utf8) else { continue }
             if let line = text.components(separatedBy: .newlines).firstIndex(where: {
               $0.contains("func " + symbol + "(")
                 || $0.contains("func " + symbol.replacingOccurrences(of: "()", with: "") + "(")
+                || $0.contains("fn " + symbol + "(")
             }) {
               return (file, line)
             }

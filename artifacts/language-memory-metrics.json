@@ -1,0 +1,48 @@
+{
+  "dataset_lines": 10000,
+  "dataset_bytes": 517690,
+  "main_pid": 34949,
+  "helper_pid": 34967,
+  "samples": [
+    {
+      "main_rss_bytes": 164315136,
+      "helper_rss_bytes": 47087616,
+      "combined_rss_bytes": 211402752
+    },
+    {
+      "main_rss_bytes": 164315136,
+      "helper_rss_bytes": 47087616,
+      "combined_rss_bytes": 211402752
+    },
+    {
+      "main_rss_bytes": 164265984,
+      "helper_rss_bytes": 47087616,
+      "combined_rss_bytes": 211353600
+    },
+    {
+      "main_rss_bytes": 164282368,
+      "helper_rss_bytes": 47087616,
+      "combined_rss_bytes": 211369984
+    },
+    {
+      "main_rss_bytes": 164282368,
+      "helper_rss_bytes": 47087616,
+      "combined_rss_bytes": 211369984
+    }
+  ],
+  "main_executable_sha256": "c025776994ba58a3554a8ce022563014cf0e8282168b6fa0ad3c998f39a2c2fd",
+  "helper_executable_sha256": "d01899e1a91d5b59210900a5c57b913c8b9c490de4b20c9a7cc1a29aec2dd5b5",
+  "syntax": {
+    "document_id": "0A51E78A-E0DE-4805-B26F-1F9B8AD69D35",
+    "document_version": 1,
+    "grammar_id": "rust",
+    "helper_pid": 34967,
+    "span_count": 29996,
+    "status": "Tree-sitter",
+    "utf16_length": 427708
+  },
+  "median_main_rss_mib": 156.671875,
+  "median_helper_rss_mib": 44.90625,
+  "median_combined_rss_mib": 201.578125,
+  "measurement": "Paired ps RSS snapshots, 5 seconds after successful native highlighting through the packaged XPC helper, restored Rust buffer; no LSP, task, debugger or terminal. RSS is not physical footprint or peak memory. No screen-latency or visual-highlighting assertion."
+}

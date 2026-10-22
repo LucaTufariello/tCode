@@ -1,0 +1,49 @@
+{
+  "applicationDeepStrictSignatureVerified": true,
+  "mainAppEntitlements": {},
+  "helper": {
+    "path": "dist/tCode.app/Contents/XPCServices/dev.tufariello.tCode.SyntaxService.xpc/Contents/MacOS/TCodeSyntaxService",
+    "architecture": "arm64",
+    "sha256": "d01899e1a91d5b59210900a5c57b913c8b9c490de4b20c9a7cc1a29aec2dd5b5",
+    "strictSignatureVerified": true,
+    "entitlements": {
+      "com.apple.security.app-sandbox": true,
+      "com.apple.security.cs.disable-library-validation": true
+    },
+    "sameSHA256AsPackagedProbe": true
+  },
+  "grammarModules": [
+    {
+      "path": "dist/grammar-artifacts/c/grammar.dylib",
+      "architecture": "arm64",
+      "sha256": "9a8cb4445ad6720a876c7ca64bb41743e9548f328a049ac59e5ab6f62773b9aa",
+      "strictSignatureVerified": true
+    },
+    {
+      "path": "dist/grammar-artifacts/cpp/grammar.dylib",
+      "architecture": "arm64",
+      "sha256": "9884875d5dc76443af1783880bc523d2c64ff7d11412b3a77d72b23cecc920bd",
+      "strictSignatureVerified": true
+    },
+    {
+      "path": "dist/grammar-artifacts/python/grammar.dylib",
+      "architecture": "arm64",
+      "sha256": "276d00830b90b0b5801e3540ea329cad2c30fb0f7b55bddce44d918fa00ae229",
+      "strictSignatureVerified": true
+    },
+    {
+      "path": "dist/grammar-artifacts/rust/grammar.dylib",
+      "architecture": "arm64",
+      "sha256": "4a5ff90b1282f6bae989e19ac946da96f87faa6a816fc9a752b712856ad5bfe1",
+      "strictSignatureVerified": true
+    },
+    {
+      "path": "dist/grammar-artifacts/swift/grammar.dylib",
+      "architecture": "arm64",
+      "sha256": "8b21bf50ad3a2657b8d9a2905d045efb0cade726b9d493eca5ef28c45e165c20",
+      "strictSignatureVerified": true
+    }
+  ],
+  "signedWith": "ad hoc",
+  "developerIDNotarizationPerformed": false
+}

@@ -46,6 +46,25 @@ public enum TestReports {
             TestEntry(
               name: line, status: "", path: nil, symbol: line.components(separatedBy: "/").last))
         }
+      } else if runner == "cargo" {
+        if line.hasPrefix("test "), let separator = line.range(of: " ... ") {
+          let name = String(line[line.index(line.startIndex, offsetBy: 5)..<separator.lowerBound])
+          let value = String(line[separator.upperBound...])
+          let status =
+            value == "ok"
+            ? "PASSED" : value == "FAILED" ? "FAILED" : value.hasPrefix("ignored") ? "SKIPPED" : ""
+          if !status.isEmpty {
+            entries.append(
+              .init(
+                name: name, status: status, path: nil,
+                symbol: name.components(separatedBy: "::").last))
+          }
+        } else if line.hasSuffix(": test") {
+          let name = String(line.dropLast(6))
+          entries.append(
+            .init(
+              name: name, status: "", path: nil, symbol: name.components(separatedBy: "::").last))
+        }
       } else if runner == "ctest" {
         if let regex = try? NSRegularExpression(
           pattern: #"(?:\d+/\d+\s+)?Test\s+#\d+:\s+([^\s]+)(.*)"#),

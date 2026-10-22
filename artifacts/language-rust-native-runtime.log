@@ -1,0 +1,75 @@
+Building for debugging...
+[Computing dependencies]
+[Pre-planning 1 / 444]
+[Planning deferred tasks]
+[8 / 65]
+warning: missing creator for mutated node: ('/Users/lucatufariello/code/tCode/.build/out/Products/Debug/SwiftTerm_SwiftTerm.bundle/Contents/MacOS')
+[13 / 66] CTreeSitter
+[16 / 67] SwiftTerm
+In file included from /Users/lucatufariello/code/tCode/Sources/CTreeSitter/runtime/lib.c:6:
+/Users/lucatufariello/code/tCode/Sources/CTreeSitter/runtime/./parser.c:403:7: warning: implicit conversion loses integer precision: 'uintptr_t' (aka 'unsigned long') to 'uint32_t' (aka 'unsigned int') [-Wshorten-64-to-32]
+  401 |     length = ts_wasm_store_call_scanner_serialize(
+      |              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  402 |       self->wasm_store,
+  403 |       (uintptr_t)self->external_scanner_payload,
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/lucatufariello/code/tCode/Sources/CTreeSitter/runtime/./parser.c:433:7: warning: implicit conversion loses integer precision: 'uintptr_t' (aka 'unsigned long') to 'uint32_t' (aka 'unsigned int') [-Wshorten-64-to-32]
+  431 |     ts_wasm_store_call_scanner_deserialize(
+      |     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  432 |       self->wasm_store,
+  433 |       (uintptr_t)self->external_scanner_payload,
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/lucatufariello/code/tCode/Sources/CTreeSitter/runtime/./parser.c:456:7: warning: implicit conversion loses integer precision: 'uintptr_t' (aka 'unsigned long') to 'uint32_t' (aka 'unsigned int') [-Wshorten-64-to-32]
+  454 |     bool result = ts_wasm_store_call_scanner_scan(
+      |                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  455 |       self->wasm_store,
+  456 |       (uintptr_t)self->external_scanner_payload,
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+3 warnings generated.
+[17 / 68] CTreeSitter
+[23 / 67] TCodeSyntax
+[28 / 71] SwiftTerm
+[28 / 71] TCodeSyntax
+[33 / 70] TCodeSyntax
+[37 / 71] TCodeSyntaxTests-product
+[41 / 77]
+[42 / 77] TCodeSyntaxService-product
+[47 / 78] TCodeSyntaxTests-product
+[48 / 78] TCodeSyntaxTests-product
+[49 / 78] TCodeSyntaxTests-product
+[53 / 81] SwiftTerm
+[57 / 77] TCode
+[63 / 83] tCode-product
+[65 / 85] tCode-product
+[71 / 88] TCode
+[71 / 88] tCode-product
+[75 / 90] tCode-product
+[79 / 90] TCodeEditorTests-product
+[84 / 95] TCodeEditorTests-product
+[89 / 95] TCodeEditorTests-product
+[91 / 95] TCodeEditorTests-product
+Build complete! (6,28 sec)
+Test Suite 'Selected tests' started at 2026-10-21 17:13:29.379.
+Test Suite 'TCodeSyntaxTests.xctest' started at 2026-10-21 17:13:29.387.
+Test Suite 'TCodeSyntaxTests.xctest' passed at 2026-10-21 17:13:29.387.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'Selected tests' passed at 2026-10-21 17:13:29.387.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.008) seconds
+Test Suite 'Selected tests' started at 2026-10-21 17:13:29.453.
+Test Suite 'TCodeEditorTests.xctest' started at 2026-10-21 17:13:29.459.
+Test Suite 'RustRuntimeIntegrationTests' started at 2026-10-21 17:13:29.459.
+Test Case '-[TCodeEditorTests.RustRuntimeIntegrationTests testImportedRustPackDrivesNativeLanguageEditorAndCargoWorkflows]' started.
+Test Case '-[TCodeEditorTests.RustRuntimeIntegrationTests testImportedRustPackDrivesNativeLanguageEditorAndCargoWorkflows]' passed (7.066 seconds).
+Test Suite 'RustRuntimeIntegrationTests' passed at 2026-10-21 17:13:36.525.
+	 Executed 1 test, with 0 failures (0 unexpected) in 7.066 (7.066) seconds
+Test Suite 'TCodeEditorTests.xctest' passed at 2026-10-21 17:13:36.525.
+	 Executed 1 test, with 0 failures (0 unexpected) in 7.066 (7.066) seconds
+Test Suite 'Selected tests' passed at 2026-10-21 17:13:36.525.
+	 Executed 1 test, with 0 failures (0 unexpected) in 7.066 (7.073) seconds
+VERIFIED native Rust: on-demand JSON import; tools off until enabled; LanguageSession definition=1, completion=37, diagnostics=3; shared split rustfmt undo/redo; Cargo build/run42/test and PASSED navigator row
+Test Suite 'Selected tests' started at 2026-10-21 17:13:36.712.
+Test Suite 'TCodeCoreTests.xctest' started at 2026-10-21 17:13:36.720.
+Test Suite 'TCodeCoreTests.xctest' passed at 2026-10-21 17:13:36.720.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'Selected tests' passed at 2026-10-21 17:13:36.720.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.008) seconds

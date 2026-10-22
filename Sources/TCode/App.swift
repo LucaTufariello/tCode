@@ -218,6 +218,9 @@ extension Notification.Name {
       "Editor",
       [
         ("Enable Language Tools", "enableLanguages", "", []),
+        ("Document Language…", "selectLanguage", "", []),
+        ("Reload Language Packs", "reloadLanguagePacks", "", []),
+        ("Enable Workspace Language Configurations…", "workspaceLanguagePacks", "", []),
         ("Add Cursor Below", "cursorBelow", "\u{F701}", [.control, .option]),
         ("Add Cursor Above", "cursorAbove", "\u{F700}", [.control, .option]),
         ("Fold Selection / Unfold All", "fold", "[", [.command, .option]),
@@ -287,9 +290,6 @@ struct SettingsView: View {
   @AppStorage("autosave") var autosave = false
   @AppStorage("appearance") var appearance = "system"
   @AppStorage("fontName") var fontName = "SF Mono"
-  @State var paths: [String: String] = [:]
-  @State var disabled: Set<String> = []
-  let packs = LanguagePack.discover()
   var body: some View {
     TabView {
       Form {
@@ -317,49 +317,10 @@ struct SettingsView: View {
           )
         }
       }.formStyle(.grouped).tabItem { Label("General", systemImage: "gearshape") }
-      ScrollView {
-        VStack(alignment: .leading, spacing: 16) {
-          ForEach(packs, id: \.id) { pack in
-            GroupBox(pack.name) {
-              VStack(alignment: .leading, spacing: 8) {
-                Toggle(
-                  "Enabled",
-                  isOn: Binding(
-                    get: { !disabled.contains(pack.id) },
-                    set: { enabled in
-                      if enabled { disabled.remove(pack.id) } else { disabled.insert(pack.id) }
-                      UserDefaults.standard.set(!enabled, forKey: "disabled." + pack.id)
-                      NotificationCenter.default.post(name: .tcodeToolSettingsChanged, object: nil)
-                    }))
-                ForEach([pack.server, pack.formatter, pack.adapter], id: \.self) { tool in
-                  TextField(
-                    tool + " path",
-                    text: Binding(
-                      get: { paths[tool] ?? ToolLocator.find(tool) ?? "" },
-                      set: {
-                        paths[tool] = $0
-                        UserDefaults.standard.set($0, forKey: "tool." + tool)
-                      })
-                  ).textFieldStyle(.roundedBorder)
-                }
-              }.padding(6)
-            }
-          }
-          Button("Show Tool Versions and Logs") {
-            if let current = (NSApp.delegate as? AppDelegate)?.current {
-              current.window?.makeKeyAndOrderFront(nil)
-              current.perform("toolVersions")
-            }
-          }
-          Text(
-            "Python: select an interpreter in Run Configuration. Use a project .venv or configure pylsp / Ruff paths. Tools are never installed when you open a folder. Tool versions and logs are available from the workspace command palette."
-          ).font(.caption).foregroundStyle(.secondary)
-        }.padding()
-      }.tabItem { Label("Language Tools", systemImage: "puzzlepiece.extension") }
+      LanguageSupportView()
+        .tabItem { Label("Language Support", systemImage: "puzzlepiece.extension") }
       ShortcutsView().tabItem { Label("Shortcuts", systemImage: "keyboard") }
-    }.padding().frame(width: 660, height: 530).onAppear {
-      disabled = Set(packs.filter { !$0.enabled }.map(\.id))
-    }
+    }.padding().frame(width: 660, height: 530)
   }
 }
 

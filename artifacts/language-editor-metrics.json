@@ -1,0 +1,12 @@
+{
+  "initial_full_layout_ms" : 188.37296962738037,
+  "large_decode_and_storage_ms" : 68.207025527954102,
+  "large_file_bytes" : 10500000,
+  "large_mode_enabled" : true,
+  "measurement" : "Synchronous NSTextView insertion plus visible-region layout; excludes display latency",
+  "native_text_insertions" : 100,
+  "typing_dataset_bytes" : 160000,
+  "typing_dataset_lines" : 10000,
+  "typing_median_ms" : 0.53191184997558594,
+  "typing_p95_ms" : 0.56493282318115234
+}

@@ -1,0 +1,40 @@
+{
+  "runs": [
+    {
+      "launch_to_first_layout_ms": 355.4389476776123,
+      "measurement": "External process start to first native window layout; single warm launch",
+      "os": "Version 27.0 (Build 26A5425a)",
+      "idle_rss_mib": 110.84375
+    },
+    {
+      "launch_to_first_layout_ms": 265.5150890350342,
+      "measurement": "External process start to first native window layout; single warm launch",
+      "os": "Version 27.0 (Build 26A5425a)",
+      "idle_rss_mib": 111.0625
+    },
+    {
+      "launch_to_first_layout_ms": 283.1432819366455,
+      "measurement": "External process start to first native window layout; single warm launch",
+      "os": "Version 27.0 (Build 26A5425a)",
+      "idle_rss_mib": 110.703125
+    },
+    {
+      "launch_to_first_layout_ms": 250.55980682373047,
+      "measurement": "External process start to first native window layout; single warm launch",
+      "os": "Version 27.0 (Build 26A5425a)",
+      "idle_rss_mib": 132.828125
+    },
+    {
+      "launch_to_first_layout_ms": 279.87194061279297,
+      "measurement": "External process start to first native window layout; single warm launch",
+      "os": "Version 27.0 (Build 26A5425a)",
+      "idle_rss_mib": 111.3125
+    }
+  ],
+  "median_first_layout_ms": 279.87194061279297,
+  "median_idle_rss_mib": 111.0625,
+  "workspace": "/Users/lucatufariello/code/tCode/artifacts/language-ui-project",
+  "app_version": "0.2.0",
+  "executable_sha256": "c025776994ba58a3554a8ce022563014cf0e8282168b6fa0ad3c998f39a2c2fd",
+  "measurement": "Warm process launch to first native window layout; RSS after 1 second; excludes tool processes and full document restoration/render latency"
+}

@@ -66,11 +66,14 @@ public actor ProtocolConnection {
     eventSink = pair.continuation
     eventTask = Task { for await message in pair.stream { await event(message) } }
   }
-  public func start(path: String, arguments: [String] = [], directory: URL? = nil) throws {
+  public func start(
+    path: String, arguments: [String] = [], directory: URL? = nil,
+    environment: [String: String] = [:]
+  ) throws {
     process.executableURL = URL(fileURLWithPath: path)
     process.arguments = arguments
     process.currentDirectoryURL = directory
-    process.environment = ToolLocator.environment
+    process.environment = ToolLocator.environment.merging(environment) { _, override in override }
     process.standardInput = input
     process.standardOutput = output
     process.standardError = errorPipe
@@ -160,17 +163,26 @@ public actor ProtocolConnection {
             continuation.resume(returning: message)
           }
         } else if kind == .lsp, let method = message["method"] as? String, let id = message["id"] {
-          if method == "workspace/applyEdit", let handler = serverRequest {
+          if ["workspace/applyEdit", "workspace/configuration", "workspace/workspaceFolders"]
+            .contains(method), let handler = serverRequest
+          {
             // Read responses while the user reviews an asynchronous server edit.
             Task {
               do {
                 let result = try await handler(message)
                 try self.write(["jsonrpc": "2.0", "id": id, "result": result])
               } catch {
-                try? self.write([
-                  "jsonrpc": "2.0", "id": id,
-                  "result": ["applied": false, "failureReason": error.localizedDescription],
-                ])
+                if method == "workspace/applyEdit" {
+                  try? self.write([
+                    "jsonrpc": "2.0", "id": id,
+                    "result": ["applied": false, "failureReason": error.localizedDescription],
+                  ])
+                } else {
+                  try? self.write([
+                    "jsonrpc": "2.0", "id": id,
+                    "error": ["code": -32603, "message": error.localizedDescription],
+                  ])
+                }
               }
             }
             continue

@@ -1,0 +1,379 @@
+Building for debugging...
+[Computing dependencies]
+[2 / 4] SwiftTerm
+warning: missing creator for mutated node: ('/Users/lucatufariello/code/tCode/.build/out/Products/Debug/SwiftTerm_SwiftTerm.bundle/Contents/MacOS')
+Build complete! (0,82 sec)
+Test Suite 'All tests' started at 2026-10-22 20:24:12.655.
+Test Suite 'TCodeSyntaxTests.xctest' started at 2026-10-22 20:24:12.661.
+Test Suite 'SyntaxTests' started at 2026-10-22 20:24:12.661.
+Test Case '-[TCodeSyntaxTests.SyntaxTests testDescriptorValidationAndArm64Integrity]' started.
+Test Case '-[TCodeSyntaxTests.SyntaxTests testDescriptorValidationAndArm64Integrity]' passed (0.001 seconds).
+Test Case '-[TCodeSyntaxTests.SyntaxTests testRealGrammarsAndIncrementalUnicode]' started.
+Test Case '-[TCodeSyntaxTests.SyntaxTests testRealGrammarsAndIncrementalUnicode]' passed (1.237 seconds).
+Test Case '-[TCodeSyntaxTests.SyntaxTests testSizeGuardDoesNotLoadGrammar]' started.
+Test Case '-[TCodeSyntaxTests.SyntaxTests testSizeGuardDoesNotLoadGrammar]' passed (0.027 seconds).
+Test Case '-[TCodeSyntaxTests.SyntaxTests testUnicodeIncrementalEditCoordinates]' started.
+Test Case '-[TCodeSyntaxTests.SyntaxTests testUnicodeIncrementalEditCoordinates]' passed (0.000 seconds).
+Test Suite 'SyntaxTests' passed at 2026-10-22 20:24:13.928.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 1.266 (1.267) seconds
+Test Suite 'TCodeSyntaxTests.xctest' passed at 2026-10-22 20:24:13.928.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 1.266 (1.267) seconds
+Test Suite 'All tests' passed at 2026-10-22 20:24:13.928.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 1.266 (1.273) seconds
+Test Suite 'All tests' started at 2026-10-22 20:24:14.055.
+Test Suite 'TCodeEditorTests.xctest' started at 2026-10-22 20:24:14.061.
+Test Suite 'EditorTests' started at 2026-10-22 20:24:14.061.
+Test Case '-[TCodeEditorTests.EditorTests testCompletionAdditionalEditsShareOneUndoTransaction]' started.
+Test Case '-[TCodeEditorTests.EditorTests testCompletionAdditionalEditsShareOneUndoTransaction]' passed (0.784 seconds).
+Test Case '-[TCodeEditorTests.EditorTests testDocumentSaveRejectsExternalChanges]' started.
+Test Case '-[TCodeEditorTests.EditorTests testDocumentSaveRejectsExternalChanges]' passed (0.010 seconds).
+Test Case '-[TCodeEditorTests.EditorTests testFoldingDoesNotModifySavedText]' started.
+Test Case '-[TCodeEditorTests.EditorTests testFoldingDoesNotModifySavedText]' passed (0.002 seconds).
+Test Case '-[TCodeEditorTests.EditorTests testMeasuredNativeTypingAndLargeFileLoad]' started.
+Test Case '-[TCodeEditorTests.EditorTests testMeasuredNativeTypingAndLargeFileLoad]' passed (0.331 seconds).
+Test Case '-[TCodeEditorTests.EditorTests testMultipleCursorsAndIMEFallback]' started.
+Test Case '-[TCodeEditorTests.EditorTests testMultipleCursorsAndIMEFallback]' passed (0.010 seconds).
+Test Case '-[TCodeEditorTests.EditorTests testNativeUndoAndRedoCommandRouting]' started.
+Test Case '-[TCodeEditorTests.EditorTests testNativeUndoAndRedoCommandRouting]' passed (0.084 seconds).
+Test Case '-[TCodeEditorTests.EditorTests testRealPythonDiagnosticsSurviveEmptyServerUpdateAndMapEmoji]' started.
+Test Case '-[TCodeEditorTests.EditorTests testRealPythonDiagnosticsSurviveEmptyServerUpdateAndMapEmoji]' passed (2.452 seconds).
+Test Case '-[TCodeEditorTests.EditorTests testSplitEditorsShareTextAndUndo]' started.
+Test Case '-[TCodeEditorTests.EditorTests testSplitEditorsShareTextAndUndo]' passed (0.008 seconds).
+Test Suite 'EditorTests' passed at 2026-10-22 20:24:17.744.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 3.681 (3.682) seconds
+Test Suite 'LanguageRuntimeTests' started at 2026-10-22 20:24:17.744.
+Test Case '-[TCodeEditorTests.LanguageRuntimeTests testBundledMigrationAndRustCatalogRemainSeparate]' started.
+Test Case '-[TCodeEditorTests.LanguageRuntimeTests testBundledMigrationAndRustCatalogRemainSeparate]' passed (0.003 seconds).
+Test Case '-[TCodeEditorTests.LanguageRuntimeTests testDocumentOverridesUpdateCommentsAndSharedPanesWithoutStartingTools]' started.
+Test Case '-[TCodeEditorTests.LanguageRuntimeTests testDocumentOverridesUpdateCommentsAndSharedPanesWithoutStartingTools]' passed (0.089 seconds).
+Test Case '-[TCodeEditorTests.LanguageRuntimeTests testExternalPackDrivesFormatterAndSharedUndo]' started.
+Test Case '-[TCodeEditorTests.LanguageRuntimeTests testExternalPackDrivesFormatterAndSharedUndo]' passed (0.150 seconds).
+Test Case '-[TCodeEditorTests.LanguageRuntimeTests testExternalPackRunsSequentialTasksAndCancels]' started.
+Test Case '-[TCodeEditorTests.LanguageRuntimeTests testExternalPackRunsSequentialTasksAndCancels]' passed (0.262 seconds).
+Test Suite 'LanguageRuntimeTests' passed at 2026-10-22 20:24:18.247.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.503 (0.503) seconds
+Test Suite 'RustRuntimeIntegrationTests' started at 2026-10-22 20:24:18.247.
+Test Case '-[TCodeEditorTests.RustRuntimeIntegrationTests testImportedRustPackDrivesNativeLanguageEditorAndCargoWorkflows]' started.
+Test Case '-[TCodeEditorTests.RustRuntimeIntegrationTests testImportedRustPackDrivesNativeLanguageEditorAndCargoWorkflows]' passed (6.490 seconds).
+Test Suite 'RustRuntimeIntegrationTests' passed at 2026-10-22 20:24:24.737.
+	 Executed 1 test, with 0 failures (0 unexpected) in 6.490 (6.490) seconds
+Test Suite 'SyntaxClientTests' started at 2026-10-22 20:24:24.737.
+Test Case '-[TCodeEditorTests.SyntaxClientTests testCancellingOneSplitDoesNotCancelSharedParse]' started.
+Test Case '-[TCodeEditorTests.SyntaxClientTests testCancellingOneSplitDoesNotCancelSharedParse]' passed (0.001 seconds).
+Test Case '-[TCodeEditorTests.SyntaxClientTests testClosedDocumentRejectsPendingResponse]' started.
+Test Case '-[TCodeEditorTests.SyntaxClientTests testClosedDocumentRejectsPendingResponse]' passed (0.000 seconds).
+Test Case '-[TCodeEditorTests.SyntaxClientTests testOlderVersionsAndOversizedQueriesNeverLaunchWork]' started.
+Test Case '-[TCodeEditorTests.SyntaxClientTests testOlderVersionsAndOversizedQueriesNeverLaunchWork]' passed (0.012 seconds).
+Test Case '-[TCodeEditorTests.SyntaxClientTests testSplitViewsShareOneInFlightAndCachedResult]' started.
+Test Case '-[TCodeEditorTests.SyntaxClientTests testSplitViewsShareOneInFlightAndCachedResult]' passed (0.000 seconds).
+Test Suite 'SyntaxClientTests' passed at 2026-10-22 20:24:24.751.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.014 (0.014) seconds
+Test Suite 'TCodeEditorTests.xctest' passed at 2026-10-22 20:24:24.751.
+	 Executed 17 tests, with 0 failures (0 unexpected) in 10.688 (10.690) seconds
+Test Suite 'All tests' passed at 2026-10-22 20:24:24.751.
+	 Executed 17 tests, with 0 failures (0 unexpected) in 10.688 (10.697) seconds
+VERIFIED native Rust: on-demand JSON import; tools off until enabled; LanguageSession definition=1, completion=37, diagnostics=3; shared split rustfmt undo/redo; Cargo build/run42/test and PASSED navigator row
+Test Suite 'All tests' started at 2026-10-22 20:24:24.894.
+Test Suite 'TCodeCoreTests.xctest' started at 2026-10-22 20:24:24.900.
+Test Suite 'CatalogUpdateTests' started at 2026-10-22 20:24:24.900.
+Test Case '-[TCodeCoreTests.CatalogUpdateTests testPublishedPackCannotBeShadowedByOlderBundledConfiguration]' started.
+Test Case '-[TCodeCoreTests.CatalogUpdateTests testPublishedPackCannotBeShadowedByOlderBundledConfiguration]' passed (0.007 seconds).
+Test Suite 'CatalogUpdateTests' passed at 2026-10-22 20:24:24.907.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.007 (0.007) seconds
+Test Suite 'CoreTests' started at 2026-10-22 20:24:24.907.
+Test Case '-[TCodeCoreTests.CoreTests testActualGitStageCommitAndStatus]' started.
+Test Case '-[TCodeCoreTests.CoreTests testActualGitStageCommitAndStatus]' passed (0.084 seconds).
+Test Case '-[TCodeCoreTests.CoreTests testCancellationCleansUpChildProcessGroup]' started.
+Test Case '-[TCodeCoreTests.CoreTests testCancellationCleansUpChildProcessGroup]' passed (0.102 seconds).
+Test Case '-[TCodeCoreTests.CoreTests testCRAndCRLFNavigation]' started.
+Test Case '-[TCodeCoreTests.CoreTests testCRAndCRLFNavigation]' passed (0.000 seconds).
+Test Case '-[TCodeCoreTests.CoreTests testExternalConflictDoesNotOverwrite]' started.
+Test Case '-[TCodeCoreTests.CoreTests testExternalConflictDoesNotOverwrite]' passed (0.002 seconds).
+Test Case '-[TCodeCoreTests.CoreTests testFilesystemCollisionsRenameAndSymlinkSave]' started.
+Test Case '-[TCodeCoreTests.CoreTests testFilesystemCollisionsRenameAndSymlinkSave]' passed (0.003 seconds).
+Test Case '-[TCodeCoreTests.CoreTests testFramingFragmentedCombinedUnicodeAndMalformed]' started.
+Test Case '-[TCodeCoreTests.CoreTests testFramingFragmentedCombinedUnicodeAndMalformed]' passed (0.001 seconds).
+Test Case '-[TCodeCoreTests.CoreTests testMeasuredProjectSearch]' started.
+Test Case '-[TCodeCoreTests.CoreTests testMeasuredProjectSearch]' passed (2.502 seconds).
+Test Case '-[TCodeCoreTests.CoreTests testNativeTestResultNavigationFormats]' started.
+Test Case '-[TCodeCoreTests.CoreTests testNativeTestResultNavigationFormats]' passed (0.001 seconds).
+Test Case '-[TCodeCoreTests.CoreTests testPositionsAcrossUnicodeEncodings]' started.
+Test Case '-[TCodeCoreTests.CoreTests testPositionsAcrossUnicodeEncodings]' passed (0.000 seconds).
+Test Case '-[TCodeCoreTests.CoreTests testProcessOutputExitAndCancellation]' started.
+Test Case '-[TCodeCoreTests.CoreTests testProcessOutputExitAndCancellation]' passed (0.103 seconds).
+Test Case '-[TCodeCoreTests.CoreTests testProtocolCancellationAndToolFailure]' started.
+Test Case '-[TCodeCoreTests.CoreTests testProtocolCancellationAndToolFailure]' passed (2.078 seconds).
+Test Case '-[TCodeCoreTests.CoreTests testRecoveryPersistsBaselineAndOriginalEncoding]' started.
+Test Case '-[TCodeCoreTests.CoreTests testRecoveryPersistsBaselineAndOriginalEncoding]' passed (0.003 seconds).
+Test Case '-[TCodeCoreTests.CoreTests testSearchPreviewRejectsExternalModification]' started.
+Test Case '-[TCodeCoreTests.CoreTests testSearchPreviewRejectsExternalModification]' passed (0.004 seconds).
+Test Case '-[TCodeCoreTests.CoreTests testUnicodeAndLineEndingsRoundTrip]' started.
+Test Case '-[TCodeCoreTests.CoreTests testUnicodeAndLineEndingsRoundTrip]' passed (0.001 seconds).
+Test Suite 'CoreTests' passed at 2026-10-22 20:24:29.794.
+	 Executed 14 tests, with 0 failures (0 unexpected) in 4.885 (4.887) seconds
+Test Suite 'IntegrationTests' started at 2026-10-22 20:24:29.794.
+Test Case '-[TCodeCoreTests.IntegrationTests testClangdLSP]' started.
+Test Case '-[TCodeCoreTests.IntegrationTests testClangdLSP]' passed (5.193 seconds).
+Test Case '-[TCodeCoreTests.IntegrationTests testCPPDebugBreakpointAndVariables]' started.
+Test Case '-[TCodeCoreTests.IntegrationTests testCPPDebugBreakpointAndVariables]' passed (1.238 seconds).
+Test Case '-[TCodeCoreTests.IntegrationTests testPythonDebugpyBreakpointAndVariables]' started.
+Test Case '-[TCodeCoreTests.IntegrationTests testPythonDebugpyBreakpointAndVariables]' passed (0.645 seconds).
+Test Case '-[TCodeCoreTests.IntegrationTests testPythonLSP]' started.
+Test Case '-[TCodeCoreTests.IntegrationTests testPythonLSP]' passed (5.591 seconds).
+Test Case '-[TCodeCoreTests.IntegrationTests testSwiftDebugBreakpointAndVariables]' started.
+Test Case '-[TCodeCoreTests.IntegrationTests testSwiftDebugBreakpointAndVariables]' passed (1.476 seconds).
+Test Case '-[TCodeCoreTests.IntegrationTests testSwiftLSP]' started.
+Test Case '-[TCodeCoreTests.IntegrationTests testSwiftLSP]' passed (5.379 seconds).
+Test Suite 'IntegrationTests' passed at 2026-10-22 20:24:49.318.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 19.522 (19.524) seconds
+Test Suite 'LanguageCatalogInstallerTests' started at 2026-10-22 20:24:49.318.
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testArchiveParentTraversalRejectedBeforeExtraction]' started.
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testArchiveParentTraversalRejectedBeforeExtraction]' passed (0.035 seconds).
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testArchiveSymlinkRejectedBeforeExtraction]' started.
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testArchiveSymlinkRejectedBeforeExtraction]' passed (0.016 seconds).
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testBundledOfflineCatalogAndInvalidCacheFallback]' started.
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testBundledOfflineCatalogAndInvalidCacheFallback]' passed (0.001 seconds).
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testCancellationAtActivationPreservesPreviousReceipt]' started.
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testCancellationAtActivationPreservesPreviousReceipt]' passed (0.363 seconds).
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testCancellationDoesNotActivateCandidate]' started.
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testCancellationDoesNotActivateCandidate]' passed (0.063 seconds).
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testCatalogCarriesNewCuratedGrammarWithoutAppChangesAndDecodesLegacy]' started.
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testCatalogCarriesNewCuratedGrammarWithoutAppChangesAndDecodesLegacy]' passed (0.001 seconds).
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testCuratedReleaseURLRejectsTraversalCredentialsAndOtherRoutes]' started.
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testCuratedReleaseURLRejectsTraversalCredentialsAndOtherRoutes]' passed (0.000 seconds).
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testDeclineAndUnknownRecipeDoNotWrite]' started.
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testDeclineAndUnknownRecipeDoNotWrite]' passed (0.045 seconds).
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testExecutableShimFailureIsNotHealthy]' started.
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testExecutableShimFailureIsNotHealthy]' passed (0.149 seconds).
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testHashedPackMustMatchCatalogIdentityAndVersion]' started.
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testHashedPackMustMatchCatalogIdentityAndVersion]' passed (0.003 seconds).
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testHealthyExistingXcodeToolsProduceAnAvailableReusePlan]' started.
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testHealthyExistingXcodeToolsProduceAnAvailableReusePlan]' passed (0.363 seconds).
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testNativeInstallBadHashAndFailedUpdatePreserveWorkingVersion]' started.
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testNativeInstallBadHashAndFailedUpdatePreserveWorkingVersion]' passed (0.346 seconds).
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testPinnedOfficialRustAnalyzerDownload]' started.
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testPinnedOfficialRustAnalyzerDownload]' passed (1.371 seconds).
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testPinnedPythonToolDownloadsAndIsolatedEnvironment]' started.
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testPinnedPythonToolDownloadsAndIsolatedEnvironment]' passed (9.187 seconds).
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testPublishedCatalogRequiresPinnedCuratedArtifact]' started.
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testPublishedCatalogRequiresPinnedCuratedArtifact]' passed (0.000 seconds).
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testReceiptCannotRemoveAnotherRecipeOrEscapeThroughSymlink]' started.
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testReceiptCannotRemoveAnotherRecipeOrEscapeThroughSymlink]' passed (0.003 seconds).
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testRecipeRejectsUnpinnedDownloadAndUnsafeExecutablePath]' started.
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testRecipeRejectsUnpinnedDownloadAndUnsafeExecutablePath]' passed (0.000 seconds).
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testRemoveRetainsUnownedVersionsAndExternalFiles]' started.
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testRemoveRetainsUnownedVersionsAndExternalFiles]' passed (0.135 seconds).
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testVersionProbeTimeoutIsNotHealthyEvenWhenTerminatedToolExitsZero]' started.
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testVersionProbeTimeoutIsNotHealthyEvenWhenTerminatedToolExitsZero]' passed (0.154 seconds).
+Test Suite 'LanguageCatalogInstallerTests' passed at 2026-10-22 20:25:01.556.
+	 Executed 19 tests, with 0 failures (0 unexpected) in 12.236 (12.238) seconds
+Test Suite 'LanguagePackPrivacyTests' started at 2026-10-22 20:25:01.556.
+Test Case '-[TCodeCoreTests.LanguagePackPrivacyTests testExistingLanguageDefaultsRemainPortable]' started.
+Test Case '-[TCodeCoreTests.LanguagePackPrivacyTests testExistingLanguageDefaultsRemainPortable]' passed (0.009 seconds).
+Test Case '-[TCodeCoreTests.LanguagePackPrivacyTests testExportRejectsLocalPathsAndCredentialFlagsInArguments]' started.
+Test Case '-[TCodeCoreTests.LanguagePackPrivacyTests testExportRejectsLocalPathsAndCredentialFlagsInArguments]' passed (0.002 seconds).
+Test Case '-[TCodeCoreTests.LanguagePackPrivacyTests testExportRejectsPrivateValuesNestedInOptionsAndDebugLaunch]' started.
+Test Case '-[TCodeCoreTests.LanguagePackPrivacyTests testExportRejectsPrivateValuesNestedInOptionsAndDebugLaunch]' passed (0.002 seconds).
+Test Case '-[TCodeCoreTests.LanguagePackPrivacyTests testInlineHighlightQueryRoundTripAndBounds]' started.
+Test Case '-[TCodeCoreTests.LanguagePackPrivacyTests testInlineHighlightQueryRoundTripAndBounds]' passed (0.016 seconds).
+Test Case '-[TCodeCoreTests.LanguagePackPrivacyTests testPortablePlaceholdersAndOrdinaryOptionsAreRetained]' started.
+Test Case '-[TCodeCoreTests.LanguagePackPrivacyTests testPortablePlaceholdersAndOrdinaryOptionsAreRetained]' passed (0.001 seconds).
+Test Suite 'LanguagePackPrivacyTests' passed at 2026-10-22 20:25:01.587.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.031 (0.031) seconds
+Test Suite 'LanguagePackTests' started at 2026-10-22 20:25:01.587.
+Test Case '-[TCodeCoreTests.LanguagePackTests testAllThreeVersionOnePacksMigrateAndVersionTwoRoundTrips]' started.
+Test Case '-[TCodeCoreTests.LanguagePackTests testAllThreeVersionOnePacksMigrateAndVersionTwoRoundTrips]' passed (0.008 seconds).
+Test Case '-[TCodeCoreTests.LanguagePackTests testAmbiguousHeaderNeedsManualOverrideAndPlainTextClearsLanguage]' started.
+Test Case '-[TCodeCoreTests.LanguagePackTests testAmbiguousHeaderNeedsManualOverrideAndPlainTextClearsLanguage]' passed (0.001 seconds).
+Test Case '-[TCodeCoreTests.LanguagePackTests testCommandPlaceholderExpansionPreservesArgumentBoundaries]' started.
+Test Case '-[TCodeCoreTests.LanguagePackTests testCommandPlaceholderExpansionPreservesArgumentBoundaries]' passed (0.000 seconds).
+Test Case '-[TCodeCoreTests.LanguagePackTests testCorruptFallbackDoesNotOverrideAnEarlierValidDuplicate]' started.
+Test Case '-[TCodeCoreTests.LanguagePackTests testCorruptFallbackDoesNotOverrideAnEarlierValidDuplicate]' passed (0.002 seconds).
+Test Case '-[TCodeCoreTests.LanguagePackTests testDuplicateReportingRemovalAndBundledFallback]' started.
+Test Case '-[TCodeCoreTests.LanguagePackTests testDuplicateReportingRemovalAndBundledFallback]' passed (0.004 seconds).
+Test Case '-[TCodeCoreTests.LanguagePackTests testHistoryChecksumRejectsModifiedBackup]' started.
+Test Case '-[TCodeCoreTests.LanguagePackTests testHistoryChecksumRejectsModifiedBackup]' passed (0.003 seconds).
+Test Case '-[TCodeCoreTests.LanguagePackTests testHistoryRetentionIsBoundedAndRemovalRetainsUnownedFiles]' started.
+Test Case '-[TCodeCoreTests.LanguagePackTests testHistoryRetentionIsBoundedAndRemovalRetainsUnownedFiles]' passed (0.069 seconds).
+Test Case '-[TCodeCoreTests.LanguagePackTests testImportAndRemovePreserveExplicitWorkspaceContext]' started.
+Test Case '-[TCodeCoreTests.LanguagePackTests testImportAndRemovePreserveExplicitWorkspaceContext]' passed (0.004 seconds).
+Test Case '-[TCodeCoreTests.LanguagePackTests testImportDoesNotExecuteConfiguredTools]' started.
+Test Case '-[TCodeCoreTests.LanguagePackTests testImportDoesNotExecuteConfiguredTools]' passed (0.003 seconds).
+Test Case '-[TCodeCoreTests.LanguagePackTests testInvalidSchemaIdentifiersRegexAndPlaceholdersAreRejected]' started.
+Test Case '-[TCodeCoreTests.LanguagePackTests testInvalidSchemaIdentifiersRegexAndPlaceholdersAreRejected]' passed (0.001 seconds).
+Test Case '-[TCodeCoreTests.LanguagePackTests testOversizedReplacementRetainsLastGoodWithoutReadingWholeFile]' started.
+Test Case '-[TCodeCoreTests.LanguagePackTests testOversizedReplacementRetainsLastGoodWithoutReadingWholeFile]' passed (0.002 seconds).
+Test Case '-[TCodeCoreTests.LanguagePackTests testPathologicalFirstLinePatternsShareDeadlineAndPreserveFileAssociations]' started.
+Test Case '-[TCodeCoreTests.LanguagePackTests testPathologicalFirstLinePatternsShareDeadlineAndPreserveFileAssociations]' passed (0.031 seconds).
+Test Case '-[TCodeCoreTests.LanguagePackTests testPortableExportRejectsLocalPathsAndPrivateEnvironment]' started.
+Test Case '-[TCodeCoreTests.LanguagePackTests testPortableExportRejectsLocalPathsAndPrivateEnvironment]' passed (0.000 seconds).
+Test Case '-[TCodeCoreTests.LanguagePackTests testRecognitionUppercaseSpecialFilenameShebangAndUnknownText]' started.
+Test Case '-[TCodeCoreTests.LanguagePackTests testRecognitionUppercaseSpecialFilenameShebangAndUnknownText]' passed (0.000 seconds).
+Test Case '-[TCodeCoreTests.LanguagePackTests testRegistryRetainsLastWorkingPackForCorruptReplacement]' started.
+Test Case '-[TCodeCoreTests.LanguagePackTests testRegistryRetainsLastWorkingPackForCorruptReplacement]' passed (0.002 seconds).
+Test Case '-[TCodeCoreTests.LanguagePackTests testVersionedHistoryRecoversAfterRestartAndRemovalPreventsResurrection]' started.
+Test Case '-[TCodeCoreTests.LanguagePackTests testVersionedHistoryRecoversAfterRestartAndRemovalPreventsResurrection]' passed (0.005 seconds).
+Test Case '-[TCodeCoreTests.LanguagePackTests testWorkspaceOverridesRequireExplicitEnableAndNeverLeakIntoOtherWorkspace]' started.
+Test Case '-[TCodeCoreTests.LanguagePackTests testWorkspaceOverridesRequireExplicitEnableAndNeverLeakIntoOtherWorkspace]' passed (0.001 seconds).
+Test Suite 'LanguagePackTests' passed at 2026-10-22 20:25:01.726.
+	 Executed 17 tests, with 0 failures (0 unexpected) in 0.138 (0.139) seconds
+Test Suite 'MigratedPackWorkflowTests' started at 2026-10-22 20:25:01.727.
+Test Case '-[TCodeCoreTests.MigratedPackWorkflowTests testMigratedCPPConfigureBuildCTestBinaryAndClangFormat]' started.
+Test Case '-[TCodeCoreTests.MigratedPackWorkflowTests testMigratedCPPConfigureBuildCTestBinaryAndClangFormat]' passed (1.455 seconds).
+Test Case '-[TCodeCoreTests.MigratedPackWorkflowTests testMigratedPythonBuildRunPytestAndRuffFormat]' started.
+Test Case '-[TCodeCoreTests.MigratedPackWorkflowTests testMigratedPythonBuildRunPytestAndRuffFormat]' passed (0.507 seconds).
+Test Case '-[TCodeCoreTests.MigratedPackWorkflowTests testMigratedSwiftPMBuildRunTestAndSwiftFormat]' started.
+Test Case '-[TCodeCoreTests.MigratedPackWorkflowTests testMigratedSwiftPMBuildRunTestAndSwiftFormat]' passed (14.528 seconds).
+Test Suite 'MigratedPackWorkflowTests' passed at 2026-10-22 20:25:18.217.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 16.490 (16.491) seconds
+Test Suite 'RustIntegrationTests' started at 2026-10-22 20:25:18.217.
+Test Case '-[TCodeCoreTests.RustIntegrationTests testCargoBuildRunTestAndRustfmt]' started.
+Test Case '-[TCodeCoreTests.RustIntegrationTests testCargoBuildRunTestAndRustfmt]' passed (1.460 seconds).
+Test Case '-[TCodeCoreTests.RustIntegrationTests testRustAnalyzerCompletionDefinitionAndDiagnostics]' started.
+Test Case '-[TCodeCoreTests.RustIntegrationTests testRustAnalyzerCompletionDefinitionAndDiagnostics]' passed (3.783 seconds).
+Test Case '-[TCodeCoreTests.RustIntegrationTests testRustLLDBBreakpointAndInspectableVariable]' started.
+Test Case '-[TCodeCoreTests.RustIntegrationTests testRustLLDBBreakpointAndInspectableVariable]' passed (1.003 seconds).
+Test Suite 'RustIntegrationTests' passed at 2026-10-22 20:25:24.463.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 6.246 (6.246) seconds
+Test Suite 'TCodeCoreTests.xctest' passed at 2026-10-22 20:25:24.463.
+	 Executed 68 tests, with 0 failures (0 unexpected) in 59.554 (59.563) seconds
+Test Suite 'All tests' passed at 2026-10-22 20:25:24.463.
+	 Executed 68 tests, with 0 failures (0 unexpected) in 59.554 (59.569) seconds
+clangd: I[20:24:29.839] Features: mac+xpc
+
+clangd: I[20:24:29.837] Apple clangd version 21.0.0 (clang-2100.3.34.2)
+
+clangd: I[20:24:29.839] PID: 33536
+
+clangd: I[20:24:29.840] Working directory: /private/var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-4AE13450-ABDB-4869-9F99-E1C693980861
+
+clangd: I[20:24:29.840] argv[0]: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clangd
+
+clangd: I[20:24:29.841] Starting LSP over stdin/stdout
+
+clangd: I[20:24:29.842] <-- initialize(1)
+
+clangd: I[20:24:29.852] --> reply:initialize(1) 10 ms
+
+clangd: I[20:24:29.853] <-- initialized
+
+clangd: I[20:24:29.853] <-- textDocument/didOpen
+
+clangd: I[20:24:29.855] Failed to find compilation database for /var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-4AE13450-ABDB-4869-9F99-E1C693980861/main.cpp
+
+clangd: I[20:24:29.855] ASTWorker building file /var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-4AE13450-ABDB-4869-9F99-E1C693980861/main.cpp version 1 with command clangd fallback
+[/var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-4AE13450-ABDB-4869-9F99-E1C693980861]
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -resource-dir=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/21 -- /var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-4AE13450-ABDB-4869-9F99-E1C693980861/main.cpp
+
+clangd: I[20:24:29.889] Built preamble of size 823808 for file /var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-4AE13450-ABDB-4869-9F99-E1C693980861/main.cpp version 1 in 0.02 seconds
+
+clangd: I[20:24:29.890] Indexing c++14 standard library in the context of /var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-4AE13450-ABDB-4869-9F99-E1C693980861/main.cpp
+
+clangd: I[20:24:29.909] --> textDocument/publishDiagnostics
+
+clangd: I[20:24:30.442] Indexed c++14 standard library: 9400 symbols, 2747 filtered
+
+clangd: I[20:24:31.865] <-- textDocument/definition(2)
+
+clangd: I[20:24:31.866] --> reply:textDocument/definition(2) 0 ms
+
+clangd: I[20:24:31.867] <-- textDocument/completion(3)
+
+clangd: I[20:24:31.885] Code complete: sema context Expression, query scopes [] (AnyScope=true), expected type int
+
+clangd: I[20:24:31.885] Code complete: 1 results from Sema, 5 from Index, 0 matched, 0 from identifiers, 6 returned.
+
+clangd: I[20:24:31.885] --> reply:textDocument/completion(3) 17 ms
+
+clangd: I[20:24:31.885] <-- textDocument/didChange
+
+clangd: I[20:24:31.941] Failed to find compilation database for /var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-4AE13450-ABDB-4869-9F99-E1C693980861/main.cpp
+
+clangd: I[20:24:31.941] ASTWorker building file /var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-4AE13450-ABDB-4869-9F99-E1C693980861/main.cpp version 2 with command clangd fallback
+[/var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-4AE13450-ABDB-4869-9F99-E1C693980861]
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -resource-dir=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/21 -- /var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-4AE13450-ABDB-4869-9F99-E1C693980861/main.cpp
+
+clangd: I[20:24:31.957] --> textDocument/publishDiagnostics
+
+VERIFIED clangd: definition=1, completion=6, diagnostics=2
+clangd: I[20:24:34.985] <-- shutdown(4)
+
+clangd: I[20:24:34.985] --> reply:shutdown(4) 0 ms
+
+clangd: Tool stopped.
+DAP cpp breakpoints: ["request_seq": 3, "type": response, "success": 1, "body": {
+    breakpoints =     (
+                {
+            column = 10;
+            id = 1;
+            instructionReference = 0x1000004AC;
+            line = 4;
+            source =             {
+                name = "main.cpp";
+                path = "/var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-56735F5D-8810-4031-B42F-157F2E1C32CE/main.cpp";
+            };
+            verified = 1;
+        }
+    );
+}, "command": setBreakpoints, "seq": 0]
+VERIFIED cpp breakpoint and answer=42
+DAP cpp: Tool stopped.
+DAP python breakpoints: ["command": setBreakpoints, "success": 1, "type": response, "seq": 9, "body": {
+    breakpoints =     (
+                {
+            id = 0;
+            line = 2;
+            source =             {
+                path = "/var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-FD417AAF-C06D-4C0A-9EEA-73C6826EA58B/main.py";
+            };
+            verified = 1;
+        }
+    );
+}, "request_seq": 3]
+VERIFIED python breakpoint and answer=42
+DAP python: Tool stopped.
+VERIFIED pylsp: definition=1, completion=84, diagnostics=2
+pylsp: Tool stopped.
+DAP swift breakpoints: ["success": 1, "command": setBreakpoints, "type": response, "request_seq": 3, "body": {
+    breakpoints =     (
+                {
+            column = 8;
+            id = 1;
+            instructionReference = 0x100000674;
+            line = 2;
+            source =             {
+                name = "main.swift";
+                path = "/var/folders/8d/vz5l1szn1lzdy3v854tsn3w80000gn/T/tcode-integration-962C84E7-F340-4E68-96DD-CD718BEF8332/main.swift";
+            };
+            verified = 1;
+        }
+    );
+}, "seq": 0]
+VERIFIED swift breakpoint and answer=42
+DAP swift: Tool stopped.
+VERIFIED sourcekit-lsp: definition=1, completion=31, diagnostics=1
+sourcekit-lsp: Tool stopped.
+TCODE_INSTALLER_METRICS {"downloadBytes":14071674,"elapsedSeconds":1.2846969366073608,"installedBytes":38205764,"recipeID":"rust-analyzer","version":"2026-10-19"}
+TCODE_INSTALLER_METRICS {"downloadBytes":21658368,"elapsedSeconds":8.4967000484466553,"installedBytes":92770728,"recipeID":"python-tools","version":"2026.10.21"}
+VERIFIED migrated C/C++ v2 pack: CMake configure/build/compile_commands, CTest/discovery, binary run=42, clang-format stdin
+VERIFIED migrated Python v2 pack: compileall, run=42, pytest, discovery, Ruff stdin format
+VERIFIED migrated Swift v2 pack: SwiftPM build/run=42/test/discovery, swift-format stdin
+VERIFIED Rust: Cargo build/run/test, one passing test, rustfmt stdin formatting
+Rust LSP: 2026-10-22T20:25:21.90542+02:00  WARN notify error: No path was found. about ["/Users/lucatufariello/Library/Application Support/rust-analyzer/rust-analyzer.toml"]
+
+VERIFIED Rust LSP: definitions=1, completion=36, diagnostics=6
+Rust LSP: Tool stopped.
+VERIFIED Rust LLDB: verified source breakpoint, answer=42
+Rust DAP: Tool stopped.
+◇ Test run started.
+↳ Testing Library Version: 2084
+↳ Target Platform: arm64e-apple-macos14.0
+✔ Test run with 0 tests in 0 suites passed after 0.001 seconds.
+◇ Test run started.
+↳ Testing Library Version: 2084
+↳ Target Platform: arm64e-apple-macos14.0
+✔ Test run with 0 tests in 0 suites passed after 0.001 seconds.
+◇ Test run started.
+↳ Testing Library Version: 2084
+↳ Target Platform: arm64e-apple-macos14.0
+✔ Test run with 0 tests in 0 suites passed after 0.001 seconds.

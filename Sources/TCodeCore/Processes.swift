@@ -36,13 +36,20 @@ public enum ToolLocator {
   public static var environment: [String: String] {
     var e = ProcessInfo.processInfo.environment
     e["PATH"] =
-      "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:" + (e["PATH"] ?? "")
+      NSHomeDirectory()
+      + "/.cargo/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:"
+      + (e["PATH"] ?? "")
     return e
   }
   public static func find(_ name: String, root: URL? = nil) -> String? {
+    guard !name.isEmpty else { return nil }
+    if name.hasPrefix("/") {
+      return FileManager.default.isExecutableFile(atPath: name) ? name : nil
+    }
     let configured = UserDefaults.standard.string(forKey: "tool." + name)
     let preferred: [String?] = [
       configured, root.map { $0.appendingPathComponent(".venv/bin/" + name).path },
+      ManagedToolPaths.resolve(name: name),
       NSHomeDirectory() + "/Library/Application Support/tCode/tools/bin/" + name,
       "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/"
         + name,

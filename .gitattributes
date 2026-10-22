@@ -7,3 +7,5 @@
 *.png binary
 *.icns binary
 *.zip binary
+# Preserve the pinned upstream runtime, including its original whitespace.
+Sources/CTreeSitter/runtime/** -whitespace

@@ -12,12 +12,19 @@ struct WorkspaceLayout: Codable {
   var splitCount = 1
   var positions: [String: Int] = [:]
   var breakpoints: [String: [Int]] = [:]
+  var languageOverrides: [String: String]?
 }
 
 extension WorkspaceWindow {
   /// Restores split geometry. Must run once the split views have a real frame, otherwise every
   /// divider would be placed against a zero-height container and leave dead space behind.
   func restoreLayout(_ layout: WorkspaceLayout) {
+    for doc in documents {
+      if let path = doc.url?.path {
+        doc.languageOverride = layout.languageOverrides?[path]
+        configureLanguage(doc)
+      }
+    }
     outer.splitViewItems.first?.isCollapsed = layout.sidebarHidden
     outer.splitViewItems.last?.isCollapsed = layout.inspectorHidden
     let panelItem = vertical.splitViewItems.last
@@ -69,6 +76,11 @@ extension WorkspaceWindow {
       verticalSplit: editorSplit.splitView.isVertical, splitCount: panes.count,
       positions: positions,
       breakpoints: Dictionary(
-        uniqueKeysWithValues: breakpoints.map { ($0.key.path, Array($0.value)) }))
+        uniqueKeysWithValues: breakpoints.map { ($0.key.path, Array($0.value)) }),
+      languageOverrides: Dictionary(
+        uniqueKeysWithValues: documents.compactMap { doc in
+          guard let path = doc.url?.path, let value = doc.languageOverride else { return nil }
+          return (path, value)
+        }))
   }
 }

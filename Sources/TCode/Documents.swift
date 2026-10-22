@@ -16,6 +16,13 @@ import TCodeCore
   var recoveryTask: Task<Void, Never>?
   var autosaveTask: Task<Void, Never>?
   var languageSession: LanguageSession?
+  var languageOverride: String?
+  var languageID: String?
+  var languagePackID: String?
+  var grammarID: String?
+  var highlightQuery: String?
+  var languageComment: String?
+  var syntaxStatus = "Basic highlighting"
   var title: String { url?.lastPathComponent ?? "Untitled" }
   var text: String { storage.string }
   var modified: Bool { (try? encoded()) != baseline && !(baseline == nil && text.isEmpty) }

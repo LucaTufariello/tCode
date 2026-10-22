@@ -1,0 +1,155 @@
+{
+  "associations" : [
+    {
+      "extensions" : [
+        "rs"
+      ],
+      "filenames" : [
+
+      ],
+      "grammarID" : "rust",
+      "languageID" : "rust"
+    }
+  ],
+  "debugger" : {
+    "adapterID" : "lldb",
+    "command" : {
+      "arguments" : [
+
+      ],
+      "environment" : {
+
+      },
+      "executable" : "lldb-dap"
+    },
+    "launch" : {
+
+    }
+  },
+  "editor" : {
+    "lineComment" : "//",
+    "snippets" : [
+      {
+        "name" : "Function",
+        "text" : "fn name() {\n    \n}\n"
+      },
+      {
+        "name" : "Main",
+        "text" : "fn main() {\n    \n}\n"
+      }
+    ]
+  },
+  "formatterCommand" : {
+    "arguments" : [
+      "--edition",
+      "2021"
+    ],
+    "environment" : {
+
+    },
+    "executable" : "rustfmt"
+  },
+  "id" : "rust",
+  "interfaceVersion" : 2,
+  "languageServer" : {
+    "command" : {
+      "arguments" : [
+
+      ],
+      "environment" : {
+
+      },
+      "executable" : "rust-analyzer"
+    },
+    "initializationOptions" : {
+      "cargo" : {
+        "buildScripts" : {
+          "enable" : false
+        }
+      },
+      "checkOnSave" : false,
+      "procMacro" : {
+        "enable" : false
+      }
+    },
+    "rootMarkers" : [
+      "Cargo.toml"
+    ]
+  },
+  "name" : "Rust",
+  "tasks" : {
+    "build" : {
+      "rootMarkers" : [
+        "Cargo.toml"
+      ],
+      "steps" : [
+        {
+          "arguments" : [
+            "build"
+          ],
+          "environment" : {
+
+          },
+          "executable" : "cargo"
+        }
+      ]
+    },
+    "discoverTests" : {
+      "resultParser" : "cargo",
+      "rootMarkers" : [
+        "Cargo.toml"
+      ],
+      "steps" : [
+        {
+          "arguments" : [
+            "test",
+            "--",
+            "--list"
+          ],
+          "environment" : {
+
+          },
+          "executable" : "cargo"
+        }
+      ]
+    },
+    "run" : {
+      "rootMarkers" : [
+        "Cargo.toml"
+      ],
+      "steps" : [
+        {
+          "arguments" : [
+            "run"
+          ],
+          "environment" : {
+
+          },
+          "executable" : "cargo"
+        }
+      ]
+    },
+    "test" : {
+      "resultParser" : "cargo",
+      "rootMarkers" : [
+        "Cargo.toml"
+      ],
+      "steps" : [
+        {
+          "arguments" : [
+            "test"
+          ],
+          "environment" : {
+
+          },
+          "executable" : "cargo"
+        }
+      ]
+    }
+  },
+  "toolRecipeIDs" : [
+    "rust-toolchain",
+    "rust-analyzer"
+  ],
+  "version" : "2.0.0"
+}

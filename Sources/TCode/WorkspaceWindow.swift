@@ -70,7 +70,8 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
   var breakpoints: [URL: Set<Int>] = [:]
   var palette: PaletteController?
   var linkHandler: OutputLinkHandler!
-  let packs = LanguagePack.discover()
+  var workspaceRegistry: LanguagePackRegistry?
+  var packs: [LanguagePack] { workspaceRegistry?.packs ?? LanguageEnvironment.shared.packs }
   var selectedURL: URL? {
     (outline.item(atRow: outline.selectedRow) as? FileNode)?.url ?? active?.url
   }
@@ -308,7 +309,8 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
       status.centerYAnchor.constraint(equalTo: statusBar.centerYAnchor),
       statusInfo.trailingAnchor.constraint(equalTo: statusBar.trailingAnchor, constant: -14),
       statusInfo.centerYAnchor.constraint(equalTo: statusBar.centerYAnchor),
-      statusInfo.leadingAnchor.constraint(greaterThanOrEqualTo: status.trailingAnchor, constant: 12),
+      statusInfo.leadingAnchor.constraint(
+        greaterThanOrEqualTo: status.trailingAnchor, constant: 12),
     ])
     contentStack.addArrangedSubview(statusBar)
     statusBar.heightAnchor.constraint(equalToConstant: Style.statusBarHeight).isActive = true
@@ -541,6 +543,11 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     }
   }
   func loadWorkspace(_ url: URL) {
+    if UserDefaults.standard.bool(forKey: "workspaceLanguagePacks." + url.path) {
+      workspaceRegistry = LanguagePackRegistry(
+        directory: languageRegistry.directory, bundledPacks: LanguagePack.bundled())
+      _ = workspaceRegistry?.reload(workspace: url, allowWorkspacePacks: true)
+    }
     rootNode = FileNode(url, directory: true)
     reloadTree()
     updateSidebarTitle()
@@ -787,11 +794,12 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
       self.updateStatus()
       if let document {
         self.watchDocument(document)
+        self.configureLanguage(document)
         if self.active === document {
           self.window?.representedURL = document.url
           for pane in self.panes {
             pane.editor.setAccessibilityLabel("Code editor, " + document.title)
-            pane.editor.comment = document.url?.pathExtension == "py" ? "#" : "//"
+            pane.editor.comment = self.recognizeLanguage(document)?.pack.editor.lineComment ?? ""
           }
         }
       }
@@ -851,6 +859,7 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
       )
     }
     active = document
+    configureLanguage(document)
     for pane in panes { pane.detach() }
     for item in editorSplit.splitViewItems { editorSplit.removeSplitViewItem(item) }
     panes.removeAll()
@@ -866,7 +875,9 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     panes.append(pane)
     editorSplit.addSplitViewItem(NSSplitViewItem(viewController: pane))
     _ = pane.view
-    let config = EditorConfiguration.load(root: root, file: document.url)
+    pane.editor.comment = recognizeLanguage(document)?.pack.editor.lineComment ?? ""
+    let config = EditorConfiguration.load(
+      root: root, file: document.url, languageDefaults: recognizeLanguage(document)?.pack.editor)
     pane.editor.indent = config.useTabs ? "\t" : String(repeating: " ", count: config.indentSize)
     pane.editor.isHorizontallyResizable = !config.wrap
     pane.scroll.hasHorizontalScroller = !config.wrap
@@ -874,6 +885,7 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     if !config.wrap { pane.editor.textContainer?.containerSize.width = 100000 }
     if let url = document.url { pane.ruler.breakpoints = breakpoints[url] ?? [] }
     pane.selectionChanged = { [weak self] position in self?.updateStatus(position) }
+    pane.syntaxChanged = { [weak self] in self?.updateStatus() }
     pane.ruler.breakpointChanged = { [weak self, weak pane] _ in
       guard let self, let url = pane?.document.url, let pane else { return }
       self.breakpoints[url] = pane.ruler.breakpoints
@@ -930,14 +942,17 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
       ? "Large file mode"
       : [
         doc.languageSession?.ready == true ? "LSP connected" : "",
+        doc.syntaxStatus == "Tree-sitter" ? "Tree-sitter" : "",
         debugSession?.stopped == true ? "Debugger paused" : "",
       ].filter { !$0.isEmpty }.joined(separator: " · ")
     statusInfo.stringValue = [
-      doc.url?.pathExtension.uppercased() ?? "TEXT", "Ln \(p.line+1), Col \(p.character+1)",
+      recognizeLanguage(doc)?.association.languageID.uppercased() ?? "TEXT",
+      "Ln \(p.line+1), Col \(p.character+1)",
       indent.first == "\t" ? "Tabs: \(indent.count)" : "Spaces: \(indent.count)",
       doc.encoding == .utf8 ? "UTF-8" : "UTF-16", lineEnding, tools,
     ].filter { !$0.isEmpty }.joined(separator: "   ")
     inspectorText.attributedStringValue = inspectorSummary(doc)
+    inspectorText.toolTip = doc.syntaxStatus
   }
   /// The document inspector: name first, then the facts, each line a step quieter.
   func inspectorSummary(_ doc: CodeDocument) -> NSAttributedString {
@@ -968,7 +983,8 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
         ]))
     result.append(
       NSAttributedString(
-        string: doc.languageSession?.pack.name ?? "Text",
+        string: recognizeLanguage(doc)?.pack.name
+          ?? "Text — choose a language with Editor → Document Language",
         attributes: [
           .font: Style.callout, .foregroundColor: NSColor.tertiaryLabelColor,
           .paragraphStyle: paragraph,
@@ -1066,6 +1082,7 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
       doc.languageSession?.close(doc, url: doc.url)
       doc.languageSession = nil
       DocumentPool.shared.documents.removeAll { $0 === doc }
+      Task { await SyntaxClient.shared.close(doc.id) }
     }
     documents.removeAll { $0 === doc }
     if let next = documents.last {
@@ -1095,7 +1112,18 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     for doc in documents { doc.languageSession = nil }
     diagnosticList.removeAll()
     refreshProblems()
-    if languageEnabled, let doc = active { activateLanguage(doc) }
+    languageEnabled = false
+    if let root, UserDefaults.standard.bool(forKey: "workspaceLanguagePacks." + root.path) {
+      if workspaceRegistry == nil {
+        workspaceRegistry = LanguagePackRegistry(
+          directory: languageRegistry.directory, bundledPacks: LanguagePack.bundled())
+      }
+      _ = workspaceRegistry?.reload(workspace: root, allowWorkspacePacks: true)
+    } else {
+      workspaceRegistry = nil
+    }
+    for doc in documents { configureLanguage(doc) }
+    updateStatus()
   }
   func report(_ error: Error) {
     let alert = NSAlert(error: error)
@@ -1169,6 +1197,11 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     fileWatchers.values.forEach { $0.1.cancel() }
     fileWatchers.removeAll()
     for doc in documents { doc.listeners.removeValue(forKey: listenerID) }
+    let others = (NSApp.delegate as? AppDelegate)?.windows.filter { $0 !== self } ?? []
+    for doc in documents
+    where !others.contains(where: { window in window.documents.contains { $0 === doc } }) {
+      Task { await SyntaxClient.shared.close(doc.id) }
+    }
     if stopTools {
       for s in services.values { s.stop() }
       debugSession?.stop()

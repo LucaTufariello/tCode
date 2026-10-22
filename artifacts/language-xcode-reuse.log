@@ -1,0 +1,41 @@
+Building for debugging...
+[Computing dependencies]
+[2 / 4] SwiftTerm
+[3 / 5] TCodeCore
+[5 / 7] TCodeCore
+[11 / 11] TCodeSyntaxProbe-product
+[12 / 12] TCodeSyntaxService-product
+[13 / 13] tCode-product
+[22 / 29] TCodeSyntaxService-product
+[22 / 29] TCodeCoreTests-product
+[24 / 34] TCodeSyntaxTests-product
+[26 / 35]
+[29 / 36] TCodeEditorTests-product
+[31 / 36] TCodeCoreTests-product
+[35 / 38] TCodeCoreTests-product
+[37 / 41] TCodeCoreTests-product
+warning: missing creator for mutated node: ('/Users/lucatufariello/code/tCode/.build/out/Products/Debug/SwiftTerm_SwiftTerm.bundle/Contents/MacOS')
+Build complete! (4,45 sec)
+Test Suite 'Selected tests' started at 2026-10-21 17:09:39.087.
+Test Suite 'TCodeSyntaxTests.xctest' started at 2026-10-21 17:09:39.095.
+Test Suite 'TCodeSyntaxTests.xctest' passed at 2026-10-21 17:09:39.095.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'Selected tests' passed at 2026-10-21 17:09:39.095.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.008) seconds
+Test Suite 'Selected tests' started at 2026-10-21 17:09:39.178.
+Test Suite 'TCodeEditorTests.xctest' started at 2026-10-21 17:09:39.184.
+Test Suite 'TCodeEditorTests.xctest' passed at 2026-10-21 17:09:39.184.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'Selected tests' passed at 2026-10-21 17:09:39.184.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.007) seconds
+Test Suite 'Selected tests' started at 2026-10-21 17:09:39.245.
+Test Suite 'TCodeCoreTests.xctest' started at 2026-10-21 17:09:39.251.
+Test Suite 'LanguageCatalogInstallerTests' started at 2026-10-21 17:09:39.251.
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testHealthyExistingXcodeToolsProduceAnAvailableReusePlan]' started.
+Test Case '-[TCodeCoreTests.LanguageCatalogInstallerTests testHealthyExistingXcodeToolsProduceAnAvailableReusePlan]' passed (0.559 seconds).
+Test Suite 'LanguageCatalogInstallerTests' passed at 2026-10-21 17:09:39.811.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.559 (0.559) seconds
+Test Suite 'TCodeCoreTests.xctest' passed at 2026-10-21 17:09:39.811.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.559 (0.559) seconds
+Test Suite 'Selected tests' passed at 2026-10-21 17:09:39.811.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.559 (0.565) seconds

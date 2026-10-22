@@ -1,0 +1,12 @@
+{
+  "old_helper_pid": 30057,
+  "document_id": "F3442E2F-8C2E-4E64-85F3-F245D03B0C0D",
+  "method": "SIGKILL sent only to the syntax worker of the isolated UI test app",
+  "new_helper_pid": 30524,
+  "app_pid": 29755,
+  "app_survived": true,
+  "native_edit_accepted": true,
+  "tree_sitter_resumed": true,
+  "recovered_span_count": 15,
+  "undo_restored_original": true
+}

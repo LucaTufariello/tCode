@@ -1,0 +1,12 @@
+/Users/lucatufariello/code/tCode/dist/tCodeSyntaxProbe.app: replacing existing signature
+python: parsed 5 captures, incremental edit passed; workspace and network denied
+Packaged syntax probe passed
+c: parsed 6 captures, incremental edit passed; workspace and network denied
+Packaged syntax probe passed
+cpp: parsed 6 captures, incremental edit passed; workspace and network denied
+Packaged syntax probe passed
+swift: parsed 8 captures, incremental edit passed; workspace and network denied
+Packaged syntax probe passed
+rust: parsed 6 captures, incremental edit passed; workspace and network denied
+Packaged syntax probe passed
+All packaged grammar, incremental, sandbox and crash-isolation probes passed.

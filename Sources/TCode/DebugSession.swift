@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import TCodeCore
 
@@ -14,8 +15,9 @@ import TCodeCore
   var location: ((URL, Position) -> Void)?
   var state: ((String) -> Void)?
   func start(
-    adapter: String, arguments: [String], program: String, python: Bool, root: URL,
-    breakpoints: [URL: [Int]], programArguments: [String] = [], environment: [String: String] = [:]
+    adapter: String, arguments: [String], program: String, python: Bool = false, root: URL,
+    breakpoints: [URL: [Int]], programArguments: [String] = [], environment: [String: String] = [:],
+    adapterID: String? = nil, launchOptions: [String: Any] = [:]
   ) async throws {
     await connection.handlers(
       event: { [weak self] event in await self?.handle(event) },
@@ -24,7 +26,8 @@ import TCodeCore
     _ = try await connection.request(
       "initialize",
       params: [
-        "clientID": "tcode", "clientName": "tCode", "adapterID": python ? "python" : "lldb",
+        "clientID": "tcode", "clientName": "tCode",
+        "adapterID": adapterID ?? (python ? "python" : "lldb"),
         "pathFormat": "path", "linesStartAt1": true, "columnsStartAt1": true,
         "supportsVariableType": true, "supportsRunInTerminalRequest": false,
       ])
@@ -37,6 +40,8 @@ import TCodeCore
       launch["justMyCode"] = true
       launch["python"] = [adapter]
     }
+    launch.merge(launchOptions) { _, configured in configured }
+    launch["program"] = program
     let launchTask = Task { try await connection.request("launch", params: launch, timeout: 60) }
     for _ in 0..<600 {
       if initialized { break }
@@ -91,9 +96,14 @@ import TCodeCore
     }
   }
   func sendBreakpoints(_ url: URL, lines: [Int]) async throws {
+    let source = url.path.withCString { path -> String in
+      guard let resolved = realpath(path, nil) else { return url.path }
+      defer { free(resolved) }
+      return String(cString: resolved)
+    }
     let result = try await connection.request(
       "setBreakpoints",
-      params: ["source": ["path": url.path], "breakpoints": lines.sorted().map { ["line": $0] }])
+      params: ["source": ["path": source], "breakpoints": lines.sorted().map { ["line": $0] }])
     let values = (result["body"] as? [String: Any])?["breakpoints"] as? [[String: Any]] ?? []
     for b in values where b["verified"] as? Bool != true {
       output?("Unverified breakpoint: \(b["message"] ?? "pending symbols")\n")

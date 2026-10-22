@@ -1,0 +1,162 @@
+{
+  "associations" : [
+    {
+      "extensions" : [
+        "c",
+        "h"
+      ],
+      "filenames" : [
+
+      ],
+      "grammarID" : "c",
+      "languageID" : "c"
+    },
+    {
+      "extensions" : [
+        "cc",
+        "cpp",
+        "hpp",
+        "cxx",
+        "h"
+      ],
+      "filenames" : [
+
+      ],
+      "grammarID" : "cpp",
+      "languageID" : "cpp"
+    }
+  ],
+  "debugger" : {
+    "adapterID" : "lldb",
+    "command" : {
+      "arguments" : [
+
+      ],
+      "environment" : {
+
+      },
+      "executable" : "lldb-dap"
+    },
+    "launch" : {
+
+    }
+  },
+  "editor" : {
+    "lineComment" : "//",
+    "snippets" : [
+      {
+        "name" : "Function",
+        "text" : "void name() {\n    \n}\n"
+      },
+      {
+        "name" : "Main",
+        "text" : "int main() {\n    return 0;\n}\n"
+      }
+    ]
+  },
+  "formatterCommand" : {
+    "arguments" : [
+      "--assume-filename=${file}"
+    ],
+    "environment" : {
+
+    },
+    "executable" : "clang-format"
+  },
+  "id" : "cpp",
+  "interfaceVersion" : 2,
+  "languageServer" : {
+    "command" : {
+      "arguments" : [
+        "--background-index",
+        "--clang-tidy",
+        "--compile-commands-dir=${buildDir}"
+      ],
+      "environment" : {
+
+      },
+      "executable" : "clangd"
+    },
+    "rootMarkers" : [
+      "CMakeLists.txt",
+      "compile_commands.json"
+    ]
+  },
+  "name" : "C / C++",
+  "tasks" : {
+    "build" : {
+      "rootMarkers" : [
+        "CMakeLists.txt"
+      ],
+      "steps" : [
+        {
+          "arguments" : [
+            "-S",
+            ".",
+            "-B",
+            "build",
+            "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+            "-DCMAKE_BUILD_TYPE=Debug"
+          ],
+          "environment" : {
+
+          },
+          "executable" : "cmake"
+        },
+        {
+          "arguments" : [
+            "--build",
+            "build"
+          ],
+          "environment" : {
+
+          },
+          "executable" : "cmake"
+        }
+      ]
+    },
+    "discoverTests" : {
+      "resultParser" : "ctest",
+      "rootMarkers" : [
+        "CMakeLists.txt"
+      ],
+      "steps" : [
+        {
+          "arguments" : [
+            "--test-dir",
+            "build",
+            "-N"
+          ],
+          "environment" : {
+
+          },
+          "executable" : "ctest"
+        }
+      ]
+    },
+    "test" : {
+      "resultParser" : "ctest",
+      "rootMarkers" : [
+        "CMakeLists.txt"
+      ],
+      "steps" : [
+        {
+          "arguments" : [
+            "--test-dir",
+            "build",
+            "--output-on-failure"
+          ],
+          "environment" : {
+
+          },
+          "executable" : "ctest"
+        }
+      ]
+    }
+  },
+  "toolRecipeIDs" : [
+    "xcode-tools",
+    "clang-format"
+  ],
+  "version" : "2.0.0"
+}

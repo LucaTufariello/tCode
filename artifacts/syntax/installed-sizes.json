@@ -1,0 +1,32 @@
+{
+  "profile": "artifacts/language-ui-profile/grammars",
+  "totalManagedStoreBytes": 9979876,
+  "grammars": [
+    {
+      "id": "c",
+      "managedStoreBytes": 661255,
+      "files": 5
+    },
+    {
+      "id": "cpp",
+      "managedStoreBytes": 3471109,
+      "files": 5
+    },
+    {
+      "id": "python",
+      "managedStoreBytes": 480623,
+      "files": 5
+    },
+    {
+      "id": "rust",
+      "managedStoreBytes": 1138267,
+      "files": 5
+    },
+    {
+      "id": "swift",
+      "managedStoreBytes": 4228622,
+      "files": 5
+    }
+  ],
+  "includes": "module, query, license, metadata, activation receipt; excludes directory allocation"
+}

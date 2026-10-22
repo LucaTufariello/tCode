@@ -1,4 +1,5 @@
 .build/
+.build-*/
 .swiftpm/
 dist/
 .tools/
@@ -12,9 +13,24 @@ xcuserdata/
 *.xcuserstate
 artifacts/*.log
 !artifacts/final-tests.log
+# Retain the evidence referenced by the language release documentation.
+!artifacts/language-release-tests.log
+!artifacts/language-final-tests.log
+!artifacts/language-core-final-tests.log
+!artifacts/language-catalog-update-tests.log
+!artifacts/language-migrated-workflows.log
+!artifacts/language-real-grammar-regression.log
+!artifacts/language-recognition-guard-tests.log
+!artifacts/language-rust-native-runtime.log
+!artifacts/language-xcode-reuse.log
+!artifacts/syntax-targeted-tests.log
+!artifacts/syntax-packaged-release.log
 artifacts/Debug/
 artifacts/UITestGit/
 artifacts/SavePanelExperiment/
+artifacts/language-ui-profile/
+artifacts/language-ui-project/
+artifacts/language-formatter-sample.txt
 **/build/
 **/__pycache__/
 **/.pytest_cache/

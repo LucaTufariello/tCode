@@ -1,0 +1,56 @@
+{
+  "runtimeVersion": "0.25.10",
+  "runtimeSHA256": "ad5040537537012b16ef6e1210a572b927c7cdc2b99d1ee88d44a7dcdc3ff44c",
+  "grammars": [
+    {
+      "id": "python",
+      "version": "0.25.0",
+      "repository": "https://github.com/tree-sitter/tree-sitter-python",
+      "revision": "293fdc02038ee2bf0e2e206711b69c90ac0d413f",
+      "sourceURL": "https://codeload.github.com/tree-sitter/tree-sitter-python/tar.gz/refs/tags/v0.25.0",
+      "sourceSHA256": "4609a3665a620e117acf795ff01b9e965880f81745f287a16336f4ca86cf270c",
+      "symbol": "tree_sitter_python",
+      "abi": 15
+    },
+    {
+      "id": "rust",
+      "version": "0.24.0",
+      "repository": "https://github.com/tree-sitter/tree-sitter-rust",
+      "revision": "18b0515fca567f5a10aee9978c6d2640e878671a",
+      "sourceURL": "https://codeload.github.com/tree-sitter/tree-sitter-rust/tar.gz/18b0515fca567f5a10aee9978c6d2640e878671a",
+      "sourceSHA256": "af3dc21a2985201f764eb94709f09277500fb732f1863f9bdd6371147ca7afe7",
+      "symbol": "tree_sitter_rust",
+      "abi": 15
+    },
+    {
+      "id": "c",
+      "version": "0.24.1",
+      "repository": "https://github.com/tree-sitter/tree-sitter-c",
+      "revision": "7fa1be1b694b6e763686793d97da01f36a0e5c12",
+      "sourceURL": "https://codeload.github.com/tree-sitter/tree-sitter-c/tar.gz/7fa1be1b694b6e763686793d97da01f36a0e5c12",
+      "sourceSHA256": "62e56fe3031e0b05831bbffd392b00c55c280e0ea953ead49a30254bf9fb9ce8",
+      "symbol": "tree_sitter_c",
+      "abi": 15
+    },
+    {
+      "id": "cpp",
+      "version": "0.23.4",
+      "repository": "https://github.com/tree-sitter/tree-sitter-cpp",
+      "revision": "f41e1a044c8a84ea9fa8577fdd2eab92ec96de02",
+      "sourceURL": "https://codeload.github.com/tree-sitter/tree-sitter-cpp/tar.gz/f41e1a044c8a84ea9fa8577fdd2eab92ec96de02",
+      "sourceSHA256": "ad4b9b56602e9b14082637988f0042521006819960ed8c308bc24ded9ceb9331",
+      "symbol": "tree_sitter_cpp",
+      "abi": 14
+    },
+    {
+      "id": "swift",
+      "version": "0.7.4",
+      "repository": "https://github.com/alex-pinkus/tree-sitter-swift",
+      "revision": "82bb3a533e0801fd2bbaa11dc49676e10bf41948",
+      "sourceURL": "https://codeload.github.com/alex-pinkus/tree-sitter-swift/tar.gz/82bb3a533e0801fd2bbaa11dc49676e10bf41948",
+      "sourceSHA256": "1cec20e92ddee958bbc1b19ff4251bff2b4618e9e55c33a45a0c56ceaa889a5c",
+      "symbol": "tree_sitter_swift",
+      "abi": 14
+    }
+  ]
+}

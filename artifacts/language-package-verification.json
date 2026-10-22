@@ -1,0 +1,65 @@
+{
+  "app": "/Users/lucatufariello/code/tCode/dist/tCode.app",
+  "version": "0.2.0",
+  "build": "2",
+  "architecture": "arm64",
+  "minimum_macos": "27.0",
+  "app_file_bytes": 9019054,
+  "mach_o_files": [
+    {
+      "path": "Contents/MacOS/tCode",
+      "architecture": "arm64",
+      "sha256": "c025776994ba58a3554a8ce022563014cf0e8282168b6fa0ad3c998f39a2c2fd",
+      "minimum_macos": "27.0",
+      "strict_signature_verified": true,
+      "linked_libraries": "/Users/lucatufariello/code/tCode/dist/tCode.app/Contents/MacOS/tCode:\n\t/System/Library/Frameworks/Foundation.framework/Versions/C/Foundation (compatibility version 300.0.0, current version 5027.0.69)\n\t/usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1359.0.0)\n\t/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit (compatibility version 45.0.0, current version 2775.10.103)\n\t/System/Library/Frameworks/Combine.framework/Versions/A/Combine (compatibility version 1.0.0, current version 3023.0.0)\n\t/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 5027.0.69)\n\t/System/Library/Frameworks/CoreGraphics.framework/Versions/A/CoreGraphics (compatibility version 64.0.0, current version 2050.0.0)\n\t/System/Library/Frameworks/CoreText.framework/Versions/A/CoreText (compatibility version 1.0.0, current version 904.0.0)\n\t/System/Library/Frameworks/CryptoKit.framework/Versions/A/CryptoKit (compatibility version 1.0.0, current version 1.0.0)\n\t/System/Library/Frameworks/ImageIO.framework/Versions/A/ImageIO (compatibility version 1.0.0, current version 1.0.0)\n\t/System/Library/Frameworks/Metal.framework/Versions/A/Metal (compatibility version 1.0.0, current version 382.5.3)\n\t/System/Library/Frameworks/MetalKit.framework/Versions/A/MetalKit (compatibility version 1.0.0, current version 174.4.0)\n\t/System/Library/Frameworks/QuartzCore.framework/Versions/A/QuartzCore (compatibility version 1.2.0, current version 1223.2.2)\n\t/System/Library/Frameworks/SwiftUI.framework/Versions/A/SwiftUI (compatibility version 1.0.0, current version 8.0.84)\n\t/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 2200.27.0)\n\t/usr/lib/libcompression.dylib (compatibility version 1.0.0, current version 1.0.0)\n\t/usr/lib/swift/libswiftCompression.dylib (compatibility version 1.0.0, current version 18.0.0, weak)\n\t/usr/lib/swift/libswiftCore.dylib (compatibility version 0.0.0, current version 0.0.0)\n\t/usr/lib/swift/libswiftCoreAudio.dylib (compatibility version 1.0.0, current version 482.102.10, weak)\n\t/usr/lib/swift/libswiftCoreFoundation.dylib (compatibility version 1.0.0, current version 120.100.0)\n\t/usr/lib/swift/libswiftCoreImage.dylib (compatibility version 1.0.0, current version 3.0.0, weak)\n\t/usr/lib/swift/libswiftDarwin.dylib (compatibility version 1.0.0, current version 428.0.10)\n\t/usr/lib/swift/libswiftDispatch.dylib (compatibility version 1.0.0, current version 1605.0.2)\n\t/usr/lib/swift/libswiftIOKit.dylib (compatibility version 1.0.0, current version 1.0.0, weak)\n\t/usr/lib/swift/libswiftMetal.dylib (compatibility version 1.0.0, current version 382.5.3, weak)\n\t/usr/lib/swift/libswiftMetalKit.dylib (compatibility version 1.0.0, current version 1.2.0, weak)\n\t/usr/lib/swift/libswiftModelIO.dylib (compatibility version 1.0.0, current version 1.0.0, weak)\n\t/usr/lib/swift/libswiftOSLog.dylib (compatibility version 1.0.0, current version 10.0.0, weak)\n\t/usr/lib/swift/libswiftObjectiveC.dylib (compatibility version 1.0.0, current version 973.1.0)\n\t/usr/lib/swift/libswiftQuartzCore.dylib (compatibility version 1.0.0, current version 5.0.0, weak)\n\t/usr/lib/swift/libswiftSpatial.dylib (compatibility version 1.0.0, current version 1.0.0, weak)\n\t/usr/lib/swift/libswiftUniformTypeIdentifiers.dylib (compatibility version 1.0.0, current version 917.0.1)\n\t/usr/lib/swift/libswiftXPC.dylib (compatibility version 1.0.0, current version 167.0.2, weak)\n\t/usr/lib/swift/libswift_Builtin_float.dylib (compatibility version 0.0.0, current version 0.0.0, weak)\n\t/usr/lib/swift/libswift_Concurrency.dylib (compatibility version 0.0.0, current version 0.0.0)\n\t/usr/lib/swift/libswiftos.dylib (compatibility version 1.0.0, current version 1090.0.0)\n\t/usr/lib/swift/libswiftsimd.dylib (compatibility version 1.0.0, current version 25.0.0, weak)"
+    },
+    {
+      "path": "Contents/XPCServices/dev.tufariello.tCode.SyntaxService.xpc/Contents/MacOS/TCodeSyntaxService",
+      "architecture": "arm64",
+      "sha256": "d01899e1a91d5b59210900a5c57b913c8b9c490de4b20c9a7cc1a29aec2dd5b5",
+      "minimum_macos": "27.0",
+      "strict_signature_verified": true,
+      "linked_libraries": "/Users/lucatufariello/code/tCode/dist/tCode.app/Contents/XPCServices/dev.tufariello.tCode.SyntaxService.xpc/Contents/MacOS/TCodeSyntaxService:\n\t/System/Library/Frameworks/Foundation.framework/Versions/C/Foundation (compatibility version 300.0.0, current version 5027.0.69)\n\t/usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1359.0.0)\n\t/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 5027.0.69)\n\t/System/Library/Frameworks/CryptoKit.framework/Versions/A/CryptoKit (compatibility version 1.0.0, current version 1.0.0)\n\t/usr/lib/swift/libswiftCore.dylib (compatibility version 0.0.0, current version 0.0.0)\n\t/usr/lib/swift/libswiftCoreFoundation.dylib (compatibility version 1.0.0, current version 120.100.0, weak)\n\t/usr/lib/swift/libswiftDarwin.dylib (compatibility version 1.0.0, current version 428.0.10)\n\t/usr/lib/swift/libswiftDispatch.dylib (compatibility version 1.0.0, current version 1605.0.2)\n\t/usr/lib/swift/libswiftIOKit.dylib (compatibility version 1.0.0, current version 1.0.0, weak)\n\t/usr/lib/swift/libswiftObjectiveC.dylib (compatibility version 1.0.0, current version 973.1.0)\n\t/usr/lib/swift/libswiftXPC.dylib (compatibility version 1.0.0, current version 167.0.2, weak)\n\t/usr/lib/swift/libswift_Builtin_float.dylib (compatibility version 0.0.0, current version 0.0.0, weak)\n\t/usr/lib/swift/libswift_Concurrency.dylib (compatibility version 0.0.0, current version 0.0.0)\n\t/usr/lib/swift/libswift_DarwinFoundation1.dylib (compatibility version 1.0.0, current version 428.0.10)\n\t/usr/lib/swift/libswiftos.dylib (compatibility version 1.0.0, current version 1090.0.0)"
+    }
+  ],
+  "main_app_entitlements": {},
+  "syntax_worker_entitlements": {
+    "com.apple.security.app-sandbox": true,
+    "com.apple.security.cs.disable-library-validation": true
+  },
+  "deep_strict_signature_verified": true,
+  "signature": "Executable=/Users/lucatufariello/code/tCode/dist/tCode.app/Contents/MacOS/tCode\nIdentifier=dev.tufariello.tCode\nFormat=app bundle with Mach-O thin (arm64)\nCodeDirectory v=20400 size=13485 flags=0x2(adhoc) hashes=415+3 location=embedded\nSignature=adhoc\nInfo.plist entries=14\nTeamIdentifier=not set\nSealed Resources version=2 rules=13 files=15\nInternal requirements count=0 size=12\nTotal signatures=1\nChosen signature=1\n",
+  "zip": {
+    "path": "/Users/lucatufariello/code/tCode/dist/tCode-0.2.0-macOS27-arm64.zip",
+    "bytes": 3039732,
+    "sha256": "d136ec4fe8a8d9c8a903a585abc5500d690d73eb932f913049acccf1ac420a7d",
+    "all_extracted_file_hashes_match": true,
+    "extracted_signature_verified": true
+  },
+  "file_sha256": {
+    "Contents/Info.plist": "5fe724a83876843cce70f25f3e714ab1890a4775c057302bc32d3330bebe1d32",
+    "Contents/MacOS/tCode": "c025776994ba58a3554a8ce022563014cf0e8282168b6fa0ad3c998f39a2c2fd",
+    "Contents/Resources/SwiftTerm_SwiftTerm.bundle/Contents/Info.plist": "ddde54d150451f6ce10e80b54c083ee12371442d93610875647efffdeff102a0",
+    "Contents/Resources/SwiftTerm_SwiftTerm.bundle/Contents/Resources/default.metallib": "ad7d4b2baf04a519da73d72bb8bed776a0d048c81ee6eceee47f9a4b20924972",
+    "Contents/Resources/THIRD-PARTY.md": "90e95c5b4af8b6ee896a275479564ef4b30e10255c0395221a4d89c7ec0a288a",
+    "Contents/Resources/licenses/SwiftArgumentParser-Apache-2.0.txt": "770af8291f708538d8ff885a0bbc4e045cd700531741c4f99528d435c14d7f55",
+    "Contents/Resources/licenses/SwiftTerm-MIT.txt": "0dc6bdd99b652c675586854efcacd59de21e2679d64fcaa20424aeb951df6856",
+    "Contents/Resources/licenses/TreeSitter-MIT.txt": "5f9cf9fb6acb1972b35ae29119ce563bb60ec097656bc4b69b9bac2d04c7a147",
+    "Contents/Resources/licenses/TreeSitter-Unicode.txt": "6a18c5fac70d7860b57f5b72b4e2c9a1ba6b3d2741eef7ff9767c5379364f10d",
+    "Contents/Resources/tCode.icns": "8eae28f295480f933fe1e2c1c0d814ff12555fdd0470194537e75d1d5eeeab46",
+    "Contents/Resources/tCode_TCode.bundle/Contents/Info.plist": "919690b697a1b0285b66a20ef3230c24625223c3ffc84bbeb9e8d143dcf77a1f",
+    "Contents/Resources/tCode_TCode.bundle/Contents/Resources/Resources/CatalogPacks/rust.json": "372d8e8e8d008d21bea9d2edcd20fb3596a13210bba7c0d5df4aa7e22f04c996",
+    "Contents/Resources/tCode_TCode.bundle/Contents/Resources/Resources/Syntax/grammars.json": "e99fedf6c6e9a281fb66b75d304370291fac2eea419d56a3db2d63b388049822",
+    "Contents/Resources/tCode_TCode.bundle/Contents/Resources/Resources/cpp.json": "364559e1ff6d39c1ee7e5108c0874ca0e59075dff92027b28d3b8a0be4c47e19",
+    "Contents/Resources/tCode_TCode.bundle/Contents/Resources/Resources/python.json": "e9a2ed24cc54177c50a6aa6488161d34aeff5e1ccf8522212f8e9fe0f1e2011f",
+    "Contents/Resources/tCode_TCode.bundle/Contents/Resources/Resources/swift.json": "f800fb0fdf38123f4be7c99cc8cef21d1861a203191ccd25e6aaa0df98fd52db",
+    "Contents/XPCServices/dev.tufariello.tCode.SyntaxService.xpc/Contents/Info.plist": "7c3ecbdaa71ad20a42565d46c677d05d892de49b4a3ea944b001a51f3f8405ea",
+    "Contents/XPCServices/dev.tufariello.tCode.SyntaxService.xpc/Contents/MacOS/TCodeSyntaxService": "d01899e1a91d5b59210900a5c57b913c8b9c490de4b20c9a7cc1a29aec2dd5b5",
+    "Contents/XPCServices/dev.tufariello.tCode.SyntaxService.xpc/Contents/_CodeSignature/CodeResources": "6686de10a28a2fe11b36cbb86dcbacc827cfc4ea116b4dabf1845e5aee629e9b",
+    "Contents/_CodeSignature/CodeResources": "db7d197198cf84ae4d367843395e586fb816be435b53e29d1a6aa3f5ebefbf94"
+  },
+  "signing": "ad hoc",
+  "developer_id_notarization_performed": false,
+  "published": false
+}

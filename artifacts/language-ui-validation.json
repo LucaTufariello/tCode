@@ -1,0 +1,77 @@
+{
+  "date": "2026-10-21",
+  "application": "dist/tCode.app",
+  "test_profile": "artifacts/language-ui-profile (isolated, ignored)",
+  "workflow": "Native AppKit/SwiftUI controls operated with computer use",
+  "catalog": {
+    "installed_defaults": [
+      "python",
+      "cpp",
+      "swift"
+    ],
+    "rust_initially_available": true,
+    "native_review_approval": true,
+    "managed_rust_analyzer_download": true,
+    "configuration_import_does_not_start_server": true,
+    "grammar_note": "Prepublication curated native modules seeded into test profile by exact packaged-helper installation probe. Public grammar downloads remain disabled while draft.",
+    "healthy_existing_xcode_reuse_after_fix": true,
+    "second_review_cancelled_without_changes": true
+  },
+  "rust": {
+    "recognized_language_id": "rust",
+    "status": "Tree-sitter / LSP connected",
+    "completion": [
+      "greet",
+      "answer",
+      "100 displayed rows"
+    ],
+    "definition": "main.rs line 1 column 4",
+    "syntax_diagnostics": 2,
+    "diagnostics_cleared_by_undo": true,
+    "cargo_build_exit": 0,
+    "cargo_run_exit": 0,
+    "cargo_run_stdout": "43",
+    "cargo_test_exit": 0,
+    "test_navigator": "PASSED tests::greets",
+    "rustfmt": true,
+    "format_single_undo_and_redo": true,
+    "lldb_breakpoint_line": 7,
+    "inspected_variable": "answer = 42",
+    "lldb_limit": "Apple LLDB warns it has no Rust language plugin; complex type inspection remains limited"
+  },
+  "selection": {
+    "header_c_vs_cpp_choices": true,
+    "selected_header_language_id": "c",
+    "untitled_explicit_rust": true,
+    "untitled_plain_text": true,
+    "header_c_selection_survives_restart": true
+  },
+  "syntax_crash": {
+    "old_helper_pid": 30057,
+    "document_id": "F3442E2F-8C2E-4E64-85F3-F245D03B0C0D",
+    "method": "SIGKILL sent only to the syntax worker of the isolated UI test app",
+    "new_helper_pid": 30524,
+    "app_pid": 29755,
+    "app_survived": true,
+    "native_edit_accepted": true,
+    "tree_sitter_resumed": true,
+    "recovered_span_count": 15,
+    "undo_restored_original": true
+  },
+  "screenshots": [
+    "language-support-installed.png",
+    "language-support-catalog.png",
+    "language-support-install-review.png",
+    "rust-editor.png",
+    "rust-completion.png",
+    "rust-diagnostics.png",
+    "rust-tests.png",
+    "rust-debugger.png",
+    "language-support-reuse-review.png"
+  ],
+  "notes": [
+    "Temporary computer-use pipe failures recovered; editor process stayed alive.",
+    "Final supplemental runtime test separately covers shared split format undo/redo, diagnostics, tasks and cleanup.",
+    "Online catalog installation remains unpublished and unverified."
+  ]
+}

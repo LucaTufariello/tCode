@@ -6,7 +6,9 @@ extension WorkspaceWindow {
     switch command {
     case "about":
       NSApp.orderFrontStandardAboutPanel(options: [
-        .applicationName: "tCode", .applicationVersion: "0.1.0",
+        .applicationName: "tCode",
+        .applicationVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString")
+          as? String ?? "0.2.0",
         .credits: NSAttributedString(string: "Native macOS IDE · Apple Silicon"),
       ])
     case "quit": NSApp.terminate(nil)
@@ -109,6 +111,9 @@ extension WorkspaceWindow {
       languageEnabled = true
       if let doc = active { activateLanguage(doc) }
       status.stringValue = "Language tools enabled for this workspace"
+    case "selectLanguage": selectLanguage()
+    case "reloadLanguagePacks": reloadLanguagePacks()
+    case "workspaceLanguagePacks": allowWorkspaceLanguagePacks()
     case "toolVersions": toolVersions()
     case "completion", "hover", "signatureHelp", "definition", "references", "symbols",
       "renameSymbol", "codeAction":
@@ -153,6 +158,7 @@ extension WorkspaceWindow {
     case "stopDebug":
       debugSession?.stop()
       debugSession = nil
+      updateStatus()
     case "variables": inspectVariables()
     case "watch": addWatch()
     case "watches": inspectWatches()
@@ -279,6 +285,8 @@ extension WorkspaceWindow {
   func commandPalette() {
     let commands: [(String, String)] = [
       ("Enable Language Tools in Workspace", "enableLanguages"), ("Quick Open", "quickOpen"),
+      ("Document Language…", "selectLanguage"), ("Reload Language Packs", "reloadLanguagePacks"),
+      ("Enable Workspace Language Configurations…", "workspaceLanguagePacks"),
       ("Find in Workspace…", "search"), ("Replace in Workspace…", "replaceProject"),
       ("Find / Replace with Regex", "regexReplace"),
       ("Create File in Sidebar Folder", "createFile"), ("Create Nested Folder", "newFolder"),
@@ -335,18 +343,14 @@ extension WorkspaceWindow {
     } catch { report(error) }
   }
   func snippet() {
-    let options: [(String, String)]
-    switch active?.url?.pathExtension {
-    case "py":
-      options = [
-        ("Function", "def name():\n    pass\n"),
-        ("Main guard", "if __name__ == \"__main__\":\n    main()\n"),
-      ]
-    case "cpp", "cc", "c", "h", "hpp":
-      options = [
-        ("Function", "void name() {\n    \n}\n"), ("Main", "int main() {\n    return 0;\n}\n"),
-      ]
-    default: options = [("Function", "func name() {\n    \n}\n"), ("Comment", "// MARK: - \n")]
+    guard let doc = active, let pack = recognizeLanguage(doc)?.pack else {
+      status.stringValue = "Choose a document language before inserting snippets."
+      return
+    }
+    let options = pack.editor.snippets.map { ($0.name, $0.text) }
+    guard !options.isEmpty else {
+      status.stringValue = "This language pack has no snippets."
+      return
     }
     choose("Insert Snippet", items: options.map(\.0)) { [weak self] index in
       guard let e = self?.focusedEditor else { return }
@@ -448,8 +452,9 @@ extension WorkspaceWindow {
     return alert.runModal() == .alertFirstButtonReturn
   }
   func activateLanguage(_ doc: CodeDocument) {
-    guard let root, let url = doc.url,
-      let pack = packs.first(where: { $0.enabled && $0.extensions.contains(url.pathExtension) }),
+    configureLanguage(doc)
+    guard let root, doc.url != nil,
+      let pack = recognizeLanguage(doc)?.pack, pack.languageServer != nil,
       !doc.large
     else { return }
     Task {
@@ -775,23 +780,29 @@ extension WorkspaceWindow {
     return String(describing: value)
   }
   func formatDocument() {
-    guard let doc = active, let ext = doc.url?.pathExtension,
-      let pack = packs.first(where: { $0.extensions.contains(ext) }),
-      let tool = ToolLocator.find(pack.formatter, root: root), let e = focusedEditor
+    guard let doc = active,
+      let pack = recognizeLanguage(doc)?.pack,
+      let format = pack.formatterCommand, let e = focusedEditor
     else {
       status.stringValue = "Formatter missing — configure its path in Settings"
       return
     }
     let text = doc.text
     let version = doc.version
-    let args =
-      pack.id == "python"
-      ? ["format", "--stdin-filename", doc.url?.path ?? "file.py", "-"]
-      : pack.id == "swift" ? ["format"] : ["--assume-filename=" + (doc.url?.path ?? "file.cpp")]
     Task {
       do {
+        let command = try format.resolved(
+          LanguageRuntime.context(
+            root: root, file: doc.url,
+            python: configuration.python.isEmpty ? nil : configuration.python))
+        guard let tool = ToolLocator.find(command.executable, root: root) else {
+          throw TCodeError.message(
+            "Formatter \(command.executable) is missing. Open Settings → Language Support.")
+        }
         let result = try await RunningProcess().run(
-          executable: tool, arguments: args, directory: root, input: Data(text.utf8))
+          executable: tool, arguments: command.arguments,
+          directory: command.workingDirectory.map { URL(fileURLWithPath: $0, relativeTo: root) }
+            ?? root, environment: command.environment, input: Data(text.utf8))
         guard result.status == 0 else { throw TCodeError.message(result.output) }
         guard doc.version == version else {
           throw TCodeError.message("The buffer changed while formatting.")

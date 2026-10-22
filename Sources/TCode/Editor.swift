@@ -111,6 +111,10 @@ import TCodeCore
     _ = tc
   }
   @objc func toggleComment(_ sender: Any?) {
+    guard !comment.isEmpty else {
+      NSSound.beep()
+      return
+    }
     let ns = string as NSString
     let range = ns.lineRange(for: selectedRange())
     let lines = ns.substring(with: range).components(separatedBy: "\n")
@@ -152,10 +156,13 @@ import TCodeCore
     if found.location != NSNotFound { selectedRanges.append(NSValue(range: found)) }
   }
   func replace(_ range: NSRange, with text: String, action: String) {
+    let manager = undoManager
+    manager?.beginUndoGrouping()
+    defer { manager?.endUndoGrouping() }
     guard shouldChangeText(in: range, replacementString: text) else { return }
     textStorage?.replaceCharacters(in: range, with: text)
     didChangeText()
-    undoManager?.setActionName(action)
+    manager?.setActionName(action)
   }
 }
 
@@ -203,7 +210,8 @@ import TCodeCore
     let activeLine =
       editor.codeDocument?.large == true
       ? -1
-      : PositionMap.position(in: editor.string, utf16Offset: editor.selectedRange().location).line + 1
+      : PositionMap.position(in: editor.string, utf16Offset: editor.selectedRange().location).line
+        + 1
     var line =
       PositionMap.position(
         in: editor.string,
@@ -224,7 +232,8 @@ import TCodeCore
         let label = String(line) as NSString
         let isActive = line == activeLine
         let attributes: [NSAttributedString.Key: Any] = [
-          .font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: isActive ? .medium : .regular),
+          .font: NSFont.monospacedDigitSystemFont(
+            ofSize: 11, weight: isActive ? .medium : .regular),
           .foregroundColor: isActive ? Style.gutterActive : Style.gutter,
         ]
         label.draw(
@@ -243,6 +252,7 @@ import TCodeCore
   let scroll = NSScrollView()
   var ruler: LineRuler!
   var selectionChanged: ((Position) -> Void)?
+  var syntaxChanged: (() -> Void)?
   private var highlightTask: Task<Void, Never>?
   init(document: CodeDocument) {
     self.document = document
@@ -291,7 +301,7 @@ import TCodeCore
     editor.maxSize = NSSize(
       width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
     editor.setAccessibilityLabel("Code editor, " + document.title)
-    editor.comment = document.url?.pathExtension == "py" ? "#" : "//"
+    editor.comment = document.languageComment ?? ""
     let spaces = UserDefaults.standard.integer(forKey: "indentWidth")
     editor.indent = String(repeating: " ", count: spaces == 0 ? 4 : spaces)
     scroll.documentView = editor
@@ -384,12 +394,60 @@ import TCodeCore
   }
   func highlight() {
     highlightTask?.cancel()
+    if document.languageOverride == "text" {
+      editor.layoutManager?.removeTemporaryAttribute(
+        .foregroundColor, forCharacterRange: NSRange(location: 0, length: document.storage.length))
+      document.syntaxStatus = "Plain text"
+      syntaxChanged?()
+      return
+    }
     guard !document.large else { return }
     let text = editor.string
     let version = document.version
+    let grammarID = document.grammarID
+    let query = document.highlightQuery
     highlightTask = Task { [weak self] in
       try? await Task.sleep(for: .milliseconds(100))
       guard !Task.isCancelled else { return }
+      if let grammarID {
+        do {
+          guard let id = self?.document.id else { return }
+          let parsed = try await SyntaxClient.shared.highlight(
+            documentID: id, version: version, text: text, grammarID: grammarID, queryOverride: query
+          )
+          guard let self, self.document.version == version, self.document.grammarID == grammarID,
+            !Task.isCancelled, let lm = self.editor.layoutManager
+          else { return }
+          lm.removeTemporaryAttribute(
+            .foregroundColor,
+            forCharacterRange: NSRange(location: 0, length: self.document.storage.length))
+          for span in parsed
+          where span.location >= 0 && span.length >= 0
+            && span.location <= self.document.storage.length
+            && span.length <= self.document.storage.length - span.location
+          {
+            let color: NSColor
+            switch span.capture.split(separator: ".").first.map(String.init) {
+            case "keyword", "operator": color = Style.syntaxKeyword
+            case "number", "boolean", "constant": color = Style.syntaxNumber
+            case "type", "constructor": color = Style.syntaxType
+            case "string", "character": color = Style.syntaxString
+            case "comment": color = Style.syntaxComment
+            default: color = Style.editorText
+            }
+            lm.addTemporaryAttribute(.foregroundColor, value: color, forCharacterRange: span.range)
+          }
+          self.document.syntaxStatus = "Tree-sitter"
+          self.syntaxChanged?()
+          await SyntaxMetric.record(self.document, spanCount: parsed.count)
+          return
+        } catch is CancellationError { return } catch {
+          guard let self, !Task.isCancelled else { return }
+          self.document.syntaxStatus = error.localizedDescription
+          self.syntaxChanged?()
+          await SyntaxMetric.record(self.document)
+        }
+      }
       let spans = await Task.detached { () -> [(NSRange, Int)] in
         let patterns = [
           "\\b(func|let|var|class|struct|enum|import|return|if|else|for|while|def|from|try|except|public|private|static|void|int|float|double|const|auto|namespace|include|async|await|throws|throw|guard|self|True|False|None|true|false|nil)\\b",
