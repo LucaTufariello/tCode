@@ -16,7 +16,7 @@ extension Notification.Name {
   }
 }
 
-@MainActor final class AppDelegate: NSObject, NSApplicationDelegate {
+@MainActor final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
   var windows: [WorkspaceWindow] = []
   var settings: NSWindowController?
   var current: WorkspaceWindow? { windows.first { $0.window?.isKeyWindow == true } ?? windows.last }
@@ -25,22 +25,22 @@ extension Notification.Name {
     let roots = CommandLine.arguments.dropFirst().filter { !$0.hasPrefix("-") }
     Task {
       var recovered: [CodeDocument] = []
-      do {
-        for record in try await CodeDocument.recovery.read() {
-          // A record is only worth restoring when its file is still on disk and its buffer
-          // still holds unsaved work. Anything else is stale and is dropped for good.
-          if record.path.map({ !FileManager.default.fileExists(atPath: $0) }) ?? false
-            || (record.path == nil && record.text.isEmpty)
-          {
-            try? await CodeDocument.recovery.remove(record.id)
-            continue
-          }
-          let doc = CodeDocument(
-            url: record.path.map { URL(fileURLWithPath: $0) }, recovery: record)
-          DocumentPool.shared.documents.append(doc)
-          recovered.append(doc)
+      let result = await CodeDocument.recovery.readTolerant()
+      for failure in result.failures { NSLog("Recovery: %@", failure) }
+      for record in result.records {
+        // A record is only worth restoring when its file is still on disk and its buffer
+        // still holds unsaved work. Anything else is stale and is dropped for good.
+        if record.path.map({ !FileManager.default.fileExists(atPath: $0) }) ?? false
+          || (record.path == nil && record.text.isEmpty)
+        {
+          try? await CodeDocument.recovery.remove(record.id)
+          continue
         }
-      } catch { NSLog("Recovery: %@", error.localizedDescription) }
+        let doc = CodeDocument(
+          url: record.path.map { URL(fileURLWithPath: $0) }, recovery: record)
+        DocumentPool.shared.documents.append(doc)
+        recovered.append(doc)
+      }
       // Without an explicit path on the command line tCode always starts on its welcome page.
       for path in roots.prefix(8) where FileManager.default.fileExists(atPath: path) {
         newWindow(URL(fileURLWithPath: path))
@@ -76,17 +76,51 @@ extension Notification.Name {
   }
   func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
     Task {
-      do {
-        for doc in DocumentPool.shared.documents where doc.modified {
-          try await CodeDocument.recovery.write(doc.recoveryRecord())
+      var seen = Set<UUID>()
+      for workspace in windows {
+        let modified = workspace.documents.filter { $0.modified && !seen.contains($0.id) }
+        guard !modified.isEmpty else { continue }
+        switch workspace.confirmClose(modified) {
+        case .cancel:
+          NSApp.reply(toApplicationShouldTerminate: false)
+          return
+        case .discard:
+          for doc in modified {
+            doc.autosaveTask?.cancel()
+            doc.recoveryTask?.cancel()
+            try? await CodeDocument.recovery.remove(doc.id)
+          }
+        case .keepRecovery:
+          do {
+            for doc in modified {
+              doc.recoveryTask?.cancel()
+              try await CodeDocument.recovery.write(doc.recoveryRecord())
+            }
+          } catch {
+            workspace.report(error)
+            NSApp.reply(toApplicationShouldTerminate: false)
+            return
+          }
+        case .save:
+          do {
+            for doc in modified { try await workspace.saveDocument(doc) }
+          } catch is SaveCancelled {
+            NSApp.reply(toApplicationShouldTerminate: false)
+            return
+          } catch {
+            workspace.report(error)
+            NSApp.reply(toApplicationShouldTerminate: false)
+            return
+          }
         }
-      } catch {
-        current?.report(error)
-        NSApp.reply(toApplicationShouldTerminate: false)
-        return
+        seen.formUnion(modified.map(\.id))
+      }
+      // Safety net for a modified buffer that is no longer attached to a window.
+      for doc in DocumentPool.shared.documents where doc.modified && !seen.contains(doc.id) {
+        try? await CodeDocument.recovery.write(doc.recoveryRecord())
       }
       persist()
-      for w in windows { await w.shutdown() }
+      for workspace in windows { await workspace.shutdown() }
       NSApp.reply(toApplicationShouldTerminate: true)
     }
     return .terminateLater
@@ -130,7 +164,51 @@ extension Notification.Name {
         current?.perform("closeTab")
       }
     case "settings": showSettings()
+    case "hide": NSApp.hide(nil)
+    case "hideOthers": NSApp.hideOtherApplications(nil)
+    case "showAll": NSApp.unhideAllApplications(nil)
+    case "zoom": current?.window?.performZoom(nil)
+    case "front": NSApp.arrangeInFront(nil)
+    case "help":
+      if let url = URL(string: "https://github.com/LucaTufariello/tCode") {
+        NSWorkspace.shared.open(url)
+      }
+    case "shortcuts": showSettings()
+    case "issue":
+      if let url = URL(string: "https://github.com/LucaTufariello/tCode/issues") {
+        NSWorkspace.shared.open(url)
+      }
     default: current?.perform(item.identifier?.rawValue ?? "")
+    }
+  }
+  func validateMenuItem(_ item: NSMenuItem) -> Bool {
+    let id = item.identifier?.rawValue ?? ""
+    let hasWindow = current != nil
+    let hasDocument = current?.active != nil
+    switch id {
+    case "save", "saveAs", "closeTab", "format", "comment", "duplicateLine", "multiSelect",
+      "fold", "snippet", "wrap", "splitVertical", "splitHorizontal", "closeSplit",
+      "completion", "hover", "signatureHelp", "definition", "references", "symbols",
+      "renameSymbol", "codeAction", "breakpoint", "continue", "pause", "next", "stepIn",
+      "stepOut", "variables", "watch", "watches", "removeWatch", "stopDebug", "selectLanguage",
+      "enableLanguages", "find", "goLine", "debug":
+      return hasDocument
+    case "saveAll":
+      return current?.documents.contains(where: \.modified) ?? false
+    case "undo":
+      return current?.active?.undo.canUndo ?? false
+    case "redo":
+      return current?.active?.undo.canRedo ?? false
+    case "openFolder", "newWindow", "newProject", "recent":
+      return true
+    case "sidebar", "panel", "inspector", "agent", "agentNewChat", "quickOpen", "palette", "search",
+      "replaceProject", "newFile", "openFile", "terminal", "terminalSessions", "closeTerminal",
+      "gitRefresh", "stage", "unstage", "diff", "commit", "history", "branch", "discoverTests",
+      "run", "build", "test", "fullscreen", "minimize", "zoom", "front", "reload",
+      "configuration", "reloadLanguagePacks", "workspaceLanguagePacks", "toolVersions", "cancel":
+      return hasWindow
+    default:
+      return true
     }
   }
   func makeMenu() {
@@ -170,8 +248,17 @@ extension Notification.Name {
       "tCode",
       [
         ("About tCode", "about", "", []), ("Settings…", "settings", ",", .command),
-        ("-", "", "", []), ("Quit tCode", "quit", "q", .command),
+        ("-", "", "", []), ("Hide tCode", "hide", "h", .command),
+        ("Hide Others", "hideOthers", "h", [.command, .option]),
+        ("Show All", "showAll", "", []), ("-", "", "", []),
+        ("Quit tCode", "quit", "q", .command),
       ])
+    if let appMenu = main.items.first?.submenu {
+      let services = NSMenuItem(title: "Services", action: nil, keyEquivalent: "")
+      services.submenu = NSMenu(title: "Services")
+      NSApp.servicesMenu = services.submenu
+      appMenu.insertItem(services, at: 2)
+    }
     menu(
       "File",
       [
@@ -242,7 +329,15 @@ extension Notification.Name {
         ("Toggle Sidebar", "sidebar", "0", .command),
         ("Toggle Bottom Panel", "panel", "j", .command),
         ("Toggle Inspector", "inspector", "0", [.command, .option]),
+        ("Toggle Agent", "agent", "a", [.command, .option]),
         ("Enter Full Screen", "fullscreen", "f", [.control, .command]),
+      ])
+    menu(
+      "Agent",
+      [
+        ("Toggle Agent", "agent", "a", [.command, .option]),
+        ("New Chat", "agentNewChat", "", []),
+        ("Agent Settings…", "agentSettings", "", []),
       ])
     menu(
       "Run",
@@ -267,13 +362,28 @@ extension Notification.Name {
         ("Commit Staged Changes…", "commit", "", []), ("History", "history", "", []),
         ("Switch Branch…", "branch", "", []),
       ])
-    menu("Window", [("Minimize", "minimize", "m", .command)])
-    NSApp.windowsMenu = main.items.last?.submenu
+    menu(
+      "Window",
+      [
+        ("Minimize", "minimize", "m", .command), ("Zoom", "zoom", "", []),
+        ("Bring All to Front", "front", "", []),
+      ])
+    menu(
+      "Help",
+      [
+        ("tCode Help", "help", "", []), ("Keyboard Shortcuts", "shortcuts", "", []),
+        ("Report an Issue", "issue", "", []),
+      ])
+    if let windowMenu = main.items.first(where: { $0.title == "Window" })?.submenu {
+      NSApp.windowsMenu = windowMenu
+    }
+    NSApp.helpMenu = main.items.last?.submenu
   }
   func showSettings() {
     if settings == nil {
       let w = NSWindow(
-        contentRect: NSRect(x: 0, y: 0, width: 660, height: 530), styleMask: [.titled, .closable],
+        contentRect: NSRect(x: 0, y: 0, width: 720, height: 560),
+        styleMask: [.titled, .closable, .resizable],
         backing: .buffered, defer: false)
       w.title = "Settings"
       w.contentViewController = NSHostingController(rootView: SettingsView())
@@ -285,6 +395,7 @@ extension Notification.Name {
 }
 
 struct SettingsView: View {
+  @ObservedObject private var languageEnvironment = LanguageEnvironment.shared
   @AppStorage("fontSize") var fontSize = 13.0
   @AppStorage("indentWidth") var indentWidth = 4
   @AppStorage("autosave") var autosave = false
@@ -319,8 +430,17 @@ struct SettingsView: View {
       }.formStyle(.grouped).tabItem { Label("General", systemImage: "gearshape") }
       LanguageSupportView()
         .tabItem { Label("Language Support", systemImage: "puzzlepiece.extension") }
+      MarketplaceView()
+        .tabItem { Label("Marketplace", systemImage: "square.grid.2x2") }
+      AgentSettingsView()
+        .tabItem { Label("Agent", systemImage: "sparkles") }
       ShortcutsView().tabItem { Label("Shortcuts", systemImage: "keyboard") }
-    }.padding().frame(width: 660, height: 530)
+    }
+    .padding()
+    .frame(width: 720, height: 560)
+    .sheet(item: $languageEnvironment.installation) { request in
+      LanguageInstallationView(request: request, environment: languageEnvironment)
+    }
   }
 }
 

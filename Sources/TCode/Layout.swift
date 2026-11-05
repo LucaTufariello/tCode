@@ -26,7 +26,7 @@ extension WorkspaceWindow {
       }
     }
     outer.splitViewItems.first?.isCollapsed = layout.sidebarHidden
-    outer.splitViewItems.last?.isCollapsed = layout.inspectorHidden
+    inspectorItem?.isCollapsed = layout.inspectorHidden
     let panelItem = vertical.splitViewItems.last
     panelItem?.isCollapsed = layout.panelHidden
     // Only a divider whose neighbouring item is visible can be positioned.
@@ -40,9 +40,15 @@ extension WorkspaceWindow {
     }
     editorSplit.splitView.isVertical = layout.verticalSplit
     if let doc = active {
-      for _ in 1..<max(1, min(4, layout.splitCount)) { addPane(doc) }
+      let count = max(1, min(4, layout.splitCount))
+      doc.splitCount = count
+      while panes.count > count, let item = editorSplit.splitViewItems.last {
+        editorSplit.removeSplitViewItem(item)
+        panes.removeLast().detach()
+      }
+      while panes.count < count { addPane(doc, index: panes.count) }
       if let path = doc.url?.path, let offset = layout.positions[path] {
-        panes.first?.go(to: PositionMap.position(in: doc.text, utf16Offset: offset))
+        panes.first?.go(to: doc.lineIndex.position(in: doc.text, utf16Offset: offset))
       }
     }
     breakpoints = Dictionary(
@@ -69,7 +75,7 @@ extension WorkspaceWindow {
       activePath: active?.url?.path,
       sidebarHidden: outer.splitViewItems.first?.isCollapsed ?? false,
       panelHidden: vertical.splitViewItems.last?.isCollapsed ?? true,
-      inspectorHidden: outer.splitViewItems.last?.isCollapsed ?? true,
+      inspectorHidden: inspectorItem?.isCollapsed ?? true,
       sidebarWidth: sidebar.view.bounds.width,
       // A collapsed panel reports a zero height, which would be a useless value to restore.
       panelHeight: max(panel.view.bounds.height, lastPanelHeight),

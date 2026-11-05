@@ -169,6 +169,15 @@ public struct RecoveryRecord: Codable, Sendable {
   }
 }
 
+public struct RecoveryReadResult: Sendable {
+  public let records: [RecoveryRecord]
+  public let failures: [String]
+  public init(records: [RecoveryRecord], failures: [String]) {
+    self.records = records
+    self.failures = failures
+  }
+}
+
 public actor RecoveryStore {
   public let directory: URL
   public init(directory: URL) { self.directory = directory }
@@ -190,5 +199,30 @@ public actor RecoveryStore {
     ).filter { $0.pathExtension == "json" }.map {
       try JSONDecoder().decode(RecoveryRecord.self, from: Data(contentsOf: $0))
     }
+  }
+  /// Loads every valid record and reports the corrupt ones instead of discarding all recovery.
+  public func readTolerant() -> RecoveryReadResult {
+    guard FileManager.default.fileExists(atPath: directory.path) else {
+      return RecoveryReadResult(records: [], failures: [])
+    }
+    let urls: [URL]
+    do {
+      urls = try FileManager.default.contentsOfDirectory(
+        at: directory, includingPropertiesForKeys: nil
+      ).filter { $0.pathExtension == "json" }
+    } catch {
+      return RecoveryReadResult(
+        records: [], failures: ["\(directory.path): \(error.localizedDescription)"])
+    }
+    var records: [RecoveryRecord] = []
+    var failures: [String] = []
+    for url in urls {
+      do {
+        records.append(try JSONDecoder().decode(RecoveryRecord.self, from: Data(contentsOf: url)))
+      } catch {
+        failures.append("\(url.path): \(error.localizedDescription)")
+      }
+    }
+    return RecoveryReadResult(records: records, failures: failures)
   }
 }

@@ -61,15 +61,27 @@ extension WorkspaceWindow {
         syncPanelHeight()
         vertical.splitViewItems.last?.isCollapsed = true
       }
-    case "inspector": outer.splitViewItems.last?.isCollapsed.toggle()
+    case "inspector":
+      if inspectorItem?.isCollapsed == true { agentItem?.isCollapsed = true }
+      inspectorItem?.isCollapsed.toggle()
+    case "agent": toggleAgent()
+    case "agentNewChat":
+      if agentItem?.isCollapsed != false { toggleAgent() }
+      agentPanel?.newChat()
+    case "agentSettings": (NSApp.delegate as? AppDelegate)?.showSettings()
     case "splitVertical", "splitHorizontal":
       guard let doc = active else { return }
       editorSplit.splitView.isVertical = command == "splitVertical"
-      addPane(doc)
+      addPane(doc, index: panes.count)
+      doc.splitCount = panes.count
     case "closeSplit":
       if panes.count > 1, let item = editorSplit.splitViewItems.last {
         editorSplit.removeSplitViewItem(item)
         panes.removeLast()
+        if let doc = active {
+          doc.splitCount = panes.count
+          if doc.viewStates.count > panes.count { doc.viewStates.removeLast() }
+        }
       }
     case "wrap":
       guard let e = focusedEditor else { return }
@@ -343,18 +355,20 @@ extension WorkspaceWindow {
     } catch { report(error) }
   }
   func snippet() {
-    guard let doc = active, let pack = recognizeLanguage(doc)?.pack else {
-      status.stringValue = "Choose a document language before inserting snippets."
+    guard let doc = active else { return }
+    let pack = recognizeLanguage(doc)?.pack
+    let pluginSnippets = SnippetStore.shared.snippets(for: doc.languageID ?? "")
+    var seen = Set<String>()
+    let snippets = ((pack?.editor.snippets ?? []) + pluginSnippets).filter {
+      seen.insert($0.name).inserted
+    }
+    guard !snippets.isEmpty else {
+      status.stringValue = "No snippets are available for this language."
       return
     }
-    let options = pack.editor.snippets.map { ($0.name, $0.text) }
-    guard !options.isEmpty else {
-      status.stringValue = "This language pack has no snippets."
-      return
-    }
-    choose("Insert Snippet", items: options.map(\.0)) { [weak self] index in
+    choose("Insert Snippet", items: snippets.map(\.name)) { [weak self] index in
       guard let e = self?.focusedEditor else { return }
-      e.insertText(options[index].1, replacementRange: e.selectedRange())
+      e.insertText(snippets[index].text, replacementRange: e.selectedRange())
     }
   }
   func searchProject(replace: Bool) {
@@ -486,25 +500,37 @@ extension WorkspaceWindow {
     }
   }
   func refreshProblems() {
-    let entries = diagnosticList.sorted { $0.key < $1.key }.flatMap { uri, list in
-      list.map { d -> String in
-        let p = (d["range"] as? [String: Any])?["start"] as? [String: Int]
-        return
-          "\(URL(string:uri)?.path ?? uri):\((p?["line"] ?? 0)+1):\((p?["character"] ?? 0)+1)  \(d["message"] ?? "")"
+    var problems: [Problem] = []
+    for (uri, list) in diagnosticList {
+      let url = URL(string: uri)
+      let path = url?.path ?? uri
+      for diagnostic in list {
+        let start = (diagnostic["range"] as? [String: Any])?["start"] as? [String: Int]
+        problems.append(
+          Problem(
+            url: url, path: path, line: start?["line"] ?? 0,
+            column: start?["character"] ?? 0, severity: diagnostic["severity"] as? Int ?? 1,
+            message: diagnostic["message"] as? String ?? "",
+            source: diagnostic["source"] as? String))
       }
     }
-    problems.string =
-      entries.isEmpty ? "No problems detected." : entries.joined(separator: "\n\n")
-    linkHandler.decorate(problems)
+    problemsView.update(problems)
     panelSelector.setLabel(
-      entries.isEmpty ? "Problems" : "Problems (\(entries.count))", forSegment: 1)
+      problems.isEmpty ? "Problems" : "Problems (\(problems.count))", forSegment: 1)
     for pane in panes {
       guard let uri = pane.document.url?.absoluteString, let lm = pane.editor.layoutManager else {
         continue
       }
-      lm.removeTemporaryAttribute(
-        .underlineStyle,
-        forCharacterRange: NSRange(location: 0, length: pane.document.storage.length))
+      let length = pane.document.storage.length
+      for range in pane.diagnosticRanges {
+        let location = min(max(0, range.location), length)
+        let safe = NSRange(location: location, length: min(max(0, range.length), length - location))
+        if safe.length > 0 {
+          lm.removeTemporaryAttribute(.underlineStyle, forCharacterRange: safe)
+          lm.removeTemporaryAttribute(.underlineColor, forCharacterRange: safe)
+        }
+      }
+      pane.diagnosticRanges.removeAll()
       for d in diagnosticList[uri] ?? [] {
         if let json = d["range"] as? [String: Any],
           let range = PositionMap.range(
@@ -518,6 +544,7 @@ extension WorkspaceWindow {
                 | NSUnderlineStyle.single.rawValue,
               .underlineColor: Style.diagnostic(severity: d["severity"] as? Int),
             ], forCharacterRange: range)
+          pane.diagnosticRanges.append(range)
         }
       }
     }
@@ -686,7 +713,10 @@ extension WorkspaceWindow {
       guard let url = URL(string: uri), url.isFileURL else {
         throw TCodeError.message("Only local file edits are supported.")
       }
-      if let doc = DocumentPool.shared.documents.first(where: { $0.url == url }), doc.modified {
+      let canonical = url.resolvingSymlinksInPath().standardizedFileURL
+      if let doc = DocumentPool.shared.documents.first(where: { $0.canonicalURL == canonical }),
+        doc.modified
+      {
         throw TCodeError.message("Save \(doc.title) before applying a workspace edit.")
       }
       let before = try await Task.detached { try Data(contentsOf: url) }.value

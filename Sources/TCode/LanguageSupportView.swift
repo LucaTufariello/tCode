@@ -575,9 +575,6 @@ struct LanguageSupportView: View {
     .sheet(item: $configuration) { pack in
       LanguageConfigurationView(pack: pack, environment: environment)
     }
-    .sheet(item: $environment.installation) { request in
-      LanguageInstallationView(request: request, environment: environment)
-    }
     .sheet(item: $environment.removal) { request in
       LanguageDownloadRemovalView(request: request, environment: environment)
     }
@@ -739,7 +736,7 @@ struct LanguageSupportView: View {
   }
 }
 
-private struct LanguageInstallationView: View {
+struct LanguageInstallationView: View {
   let request: LanguageInstallationRequest
   @ObservedObject var environment: LanguageEnvironment
   @State private var selectedRecipes = Set<String>()

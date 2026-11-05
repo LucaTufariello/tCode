@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import TCodeCore
 import XCTest
 
@@ -96,6 +97,160 @@ final class EditorTests: XCTestCase {
       actual.editor.unmarkText()
       actual.detach()
       _ = pane
+    }
+  }
+  func testDirtyFlagAndExactModifiedAfterUndo() async throws {
+    try await MainActor.run {
+      _ = NSApplication.shared
+      let doc = CodeDocument(file: try TextFile(data: Data("answer = 42\n".utf8)))
+      let pane = EditorPane(document: doc)
+      _ = pane.view
+      XCTAssertFalse(doc.isDirty)
+      doc.undo.groupsByEvent = false
+      doc.undo.beginUndoGrouping()
+      pane.editor.replace(NSRange(location: 9, length: 2), with: "43", action: "Edit Answer")
+      doc.undo.endUndoGrouping()
+      XCTAssertTrue(doc.isDirty)
+      XCTAssertTrue(doc.modified)
+      doc.undo.undo()
+      XCTAssertFalse(doc.modified)
+      // The tab dot is conservative after undo; exact modified is authoritative for close.
+      XCTAssertTrue(doc.isDirty)
+      pane.detach()
+      doc.recoveryTask?.cancel()
+    }
+  }
+  func testTabSwitchPreservesEditorStateAndSplitCount() async throws {
+    try await MainActor.run {
+      _ = NSApplication.shared
+      let one = CodeDocument(file: try TextFile(data: Data("one\ntwo\nthree\n".utf8)))
+      let two = CodeDocument(file: try TextFile(data: Data("alpha\nbeta\n".utf8)))
+      let window = WorkspaceWindow(root: nil)
+      window.add(one)
+      window.add(two)
+      window.select(one)
+      let pane = try XCTUnwrap(window.panes.first)
+      pane.editor.setSelectedRange(NSRange(location: 4, length: 0))
+      pane.editor.addCursorBelow(nil)
+      let layout = try XCTUnwrap(pane.editor.layoutManager as? FoldingLayoutManager)
+      layout.toggle(NSRange(location: 0, length: 3))
+      window.perform("splitVertical")
+      XCTAssertEqual(window.panes.count, 2)
+      window.select(two)
+      window.select(one)
+      XCTAssertEqual(window.panes.count, 2)
+      let restored = try XCTUnwrap(window.panes.first)
+      XCTAssertEqual(restored.editor.selectedRange().location, 4)
+      XCTAssertEqual(restored.editor.additionalCursors.count, 1)
+      XCTAssertEqual((restored.editor.layoutManager as? FoldingLayoutManager)?.folded.count, 1)
+      window.cleanup()
+      DocumentPool.shared.documents.removeAll { $0 === one || $0 === two }
+    }
+  }
+  func testWindowCloseReleasesUnsharedDocument() async throws {
+    try await MainActor.run {
+      _ = NSApplication.shared
+      let doc = CodeDocument(file: try TextFile(data: Data("release me\n".utf8)))
+      DocumentPool.shared.documents.append(doc)
+      let window = WorkspaceWindow(root: nil)
+      window.add(doc)
+      window.windowWillClose(
+        Notification(name: NSWindow.willCloseNotification, object: window.window))
+      XCTAssertFalse(DocumentPool.shared.documents.contains { $0 === doc })
+    }
+  }
+  func testAgentPanelLoadsWithoutStartingARequest() async throws {
+    try await MainActor.run {
+      _ = NSApplication.shared
+      let window = WorkspaceWindow(root: nil)
+      let panel = AgentPanel(workspace: window)
+      _ = panel.view
+      XCTAssertNotNil(panel.view)
+      XCTAssertEqual(panel.statusLabel.stringValue, "Ready")
+      XCTAssertEqual(panel.conversations.count, 1)
+      panel.newChat()
+      XCTAssertEqual(panel.conversations.count, 2)
+      XCTAssertEqual(panel.conversationPopup.numberOfItems, 2)
+      window.cleanup()
+    }
+  }
+  func testThemeAndSnippetStoresLoadBundledPacks() async throws {
+    try await MainActor.run {
+      let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+      defer { try? FileManager.default.removeItem(at: root) }
+      let themes = ThemeStore(directory: root)
+      XCTAssertFalse(themes.themes.isEmpty)
+      let pack = try XCTUnwrap(themes.themes.first)
+      themes.apply(pack)
+      XCTAssertEqual(themes.activeID, pack.id)
+      XCTAssertNotNil(themes.color(.background))
+      themes.useDefault()
+      XCTAssertNil(themes.activeID)
+      let snippets = SnippetStore(directory: root)
+      XCTAssertFalse(snippets.snippets(for: "python").isEmpty)
+    }
+  }
+  func testProblemsAndInspectorViewsLoad() async throws {
+    try await MainActor.run {
+      _ = NSApplication.shared
+      let problems = ProblemsView()
+      _ = problems.view
+      problems.update([
+        Problem(
+          url: URL(fileURLWithPath: "/tmp/a.swift"), path: "a.swift", line: 0, column: 1,
+          severity: 1, message: "Expected an expression", source: "test")
+      ])
+      XCTAssertEqual(problems.snapshot.count, 1)
+      let inspector = InspectorView(frame: NSRect(x: 0, y: 0, width: 260, height: 400))
+      let doc = CodeDocument(file: try TextFile(data: Data("let x = 1\n".utf8)))
+      inspector.update(document: doc, root: nil, breakpoints: [1], openDocuments: 1)
+      XCTAssertFalse(inspector.subviews.isEmpty)
+      doc.recoveryTask?.cancel()
+    }
+  }
+  func testWorkspaceExposesAgentAndBreadcrumbChrome() async throws {
+    try await MainActor.run {
+      _ = NSApplication.shared
+      let window = WorkspaceWindow(root: nil)
+      XCTAssertNotNil(window.agentItem)
+      XCTAssertTrue(window.agentItem?.isCollapsed == true)
+      XCTAssertNotNil(window.breadcrumb.superview)
+      XCTAssertTrue(window.tabStrip.isHidden)
+      XCTAssertTrue(window.breadcrumb.isHidden)
+      let doc = CodeDocument(file: try TextFile(data: Data("let x = 1\n".utf8)))
+      window.add(doc)
+      XCTAssertFalse(window.tabStrip.isHidden)
+      XCTAssertFalse(window.breadcrumb.isHidden)
+      window.cleanup()
+      DocumentPool.shared.documents.removeAll { $0 === doc }
+    }
+  }
+  func testSidebarSelectionFollowsActiveFile() async throws {
+    try await MainActor.run {
+      _ = NSApplication.shared
+      let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+      try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+      defer { try? FileManager.default.removeItem(at: root) }
+      let file = root.appendingPathComponent("main.swift")
+      try Data("let x = 1\n".utf8).write(to: file)
+      let window = WorkspaceWindow(root: nil)
+      let rootNode = FileNode(root, directory: true)
+      let child = FileNode(file, directory: false)
+      child.parent = rootNode
+      rootNode.children = [child]
+      window.rootNode = rootNode
+      window.outline.reloadData()
+      window.selectInOutline(file)
+      XCTAssertEqual(window.outline.selectedRow, 0)
+      window.cleanup()
+    }
+  }
+  func testSettingsViewLoadsWithAgentAndMarketplaceTabs() async throws {
+    try await MainActor.run {
+      _ = NSApplication.shared
+      let host = NSHostingController(rootView: SettingsView())
+      _ = host.view
+      XCTAssertNotNil(host.view)
     }
   }
   func testDocumentSaveRejectsExternalChanges() async throws {

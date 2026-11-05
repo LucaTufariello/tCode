@@ -176,7 +176,7 @@ import TCodeCore
     self.editor = editor
     super.init(scrollView: scroll, orientation: .verticalRuler)
     clientView = editor
-    ruleThickness = 58
+    ruleThickness = 52
     let recognizer = NSClickGestureRecognizer(target: self, action: #selector(clicked(_:)))
     recognizer.buttonMask = 1
     addGestureRecognizer(recognizer)
@@ -191,7 +191,10 @@ import TCodeCore
       - editor.textContainerOrigin.y
     let glyph = lm.glyphIndex(for: NSPoint(x: 0, y: y), in: tc)
     let char = lm.characterIndexForGlyph(at: glyph)
-    let line = PositionMap.position(in: editor.string, utf16Offset: char).line + 1
+    let text = (editor.textStorage?.mutableString as NSString?) ?? (editor.string as NSString)
+    let line =
+      (editor.codeDocument?.lineIndex.position(in: text, utf16Offset: char)
+        ?? PositionMap.position(in: text as String, utf16Offset: char)).line + 1
     if breakpoints.contains(line) { breakpoints.remove(line) } else { breakpoints.insert(line) }
     breakpointChanged?(line)
     needsDisplay = true
@@ -206,17 +209,23 @@ import TCodeCore
       forBoundingRect: visible.offsetBy(
         dx: -editor.textContainerOrigin.x, dy: -editor.textContainerOrigin.y), in: tc)
     var glyph = glyphs.location
-    let ns = editor.string as NSString
-    let activeLine =
-      editor.codeDocument?.large == true
-      ? -1
-      : PositionMap.position(in: editor.string, utf16Offset: editor.selectedRange().location).line
-        + 1
-    var line =
-      PositionMap.position(
-        in: editor.string,
-        utf16Offset: lm.characterIndexForGlyph(at: min(glyph, max(lm.numberOfGlyphs - 1, 0)))
-      ).line + 1
+    let ns = (editor.textStorage?.mutableString as NSString?) ?? (editor.string as NSString)
+    let activeLine: Int
+    if editor.codeDocument?.large == true {
+      activeLine = -1
+    } else {
+      let offset = editor.selectedRange().location
+      let position =
+        editor.codeDocument?.lineIndex.position(in: ns, utf16Offset: offset)
+        ?? PositionMap.position(in: ns as String, utf16Offset: offset)
+      activeLine = position.line + 1
+    }
+    let firstGlyph = min(glyph, max(lm.numberOfGlyphs - 1, 0))
+    let firstOffset = lm.characterIndexForGlyph(at: firstGlyph)
+    let firstPosition =
+      editor.codeDocument?.lineIndex.position(in: ns, utf16Offset: firstOffset)
+      ?? PositionMap.position(in: ns as String, utf16Offset: firstOffset)
+    var line = firstPosition.line + 1
     while glyph < NSMaxRange(glyphs) && glyph < lm.numberOfGlyphs {
       var range = NSRange()
       let r = lm.lineFragmentRect(forGlyphAt: glyph, effectiveRange: &range)
@@ -237,7 +246,7 @@ import TCodeCore
           .foregroundColor: isActive ? Style.gutterActive : Style.gutter,
         ]
         label.draw(
-          at: NSPoint(x: 48 - label.size(withAttributes: attributes).width, y: y + 2),
+          at: NSPoint(x: 44 - label.size(withAttributes: attributes).width, y: y + 2),
           withAttributes: attributes)
         line += 1
       }
@@ -254,6 +263,10 @@ import TCodeCore
   var selectionChanged: ((Position) -> Void)?
   var syntaxChanged: (() -> Void)?
   private var highlightTask: Task<Void, Never>?
+  private var pendingScroll: NSPoint?
+  private var highlightedRanges: [NSRange] = []
+  private var bracketRanges: [NSRange] = []
+  var diagnosticRanges: [NSRange] = []
   init(document: CodeDocument) {
     self.document = document
     let lm = FoldingLayoutManager()
@@ -292,7 +305,7 @@ import TCodeCore
     editor.backgroundColor = Style.editorBackground
     editor.insertionPointColor = .controlAccentColor
     // Reserve the gutter inside the text surface; macOS overlay rulers cover that area.
-    editor.textContainerInset = NSSize(width: 72, height: 18)
+    editor.textContainerInset = NSSize(width: 52, height: 12)
     editor.isVerticallyResizable = true
     editor.isHorizontallyResizable = false
     editor.autoresizingMask = [.width]
@@ -319,6 +332,8 @@ import TCodeCore
     NotificationCenter.default.addObserver(
       self, selector: #selector(scrolled), name: NSView.boundsDidChangeNotification,
       object: scroll.contentView)
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(themeChanged), name: .tcodeThemeChanged, object: nil)
     view = scroll
     highlight()
   }
@@ -338,10 +353,54 @@ import TCodeCore
       scroll.contentView.scroll(to: NSPoint(x: 0, y: scroll.contentView.bounds.minY))
       scroll.reflectScrolledClipView(scroll.contentView)
     }
+    applyPendingScroll()
   }
   @objc func scrolled() { ruler.needsDisplay = true }
+  @objc func themeChanged() {
+    editor.backgroundColor = Style.editorBackground
+    editor.textColor = Style.editorText
+    scroll.backgroundColor = Style.editorBackground
+    ruler.needsDisplay = true
+    highlight()
+  }
+  var viewState: EditorViewState {
+    EditorViewState(
+      selection: editor.selectedRange(),
+      additionalCursors: editor.additionalCursors,
+      folded: (editor.layoutManager as? FoldingLayoutManager)?.folded ?? [],
+      scrollOrigin: scroll.contentView.bounds.origin)
+  }
+  func saveState(at index: Int) {
+    let state = viewState
+    while document.viewStates.count <= index { document.viewStates.append(EditorViewState()) }
+    document.viewStates[index] = state
+  }
+  func restoreState(at index: Int) {
+    guard index < document.viewStates.count else { return }
+    let state = document.viewStates[index]
+    let length = document.storage.length
+    let location = min(max(0, state.selection.location), length)
+    let selection = NSRange(
+      location: location, length: min(max(0, state.selection.length), length - location))
+    editor.setSelectedRange(selection)
+    editor.additionalCursors = state.additionalCursors.filter { $0 >= 0 && $0 <= length }
+    (editor.layoutManager as? FoldingLayoutManager)?.restore(state.folded)
+    pendingScroll = state.scrollOrigin
+    view.layoutSubtreeIfNeeded()
+    applyPendingScroll()
+  }
+  private func applyPendingScroll() {
+    guard let origin = pendingScroll else { return }
+    scroll.contentView.scroll(to: origin)
+    scroll.reflectScrolledClipView(scroll.contentView)
+    pendingScroll = nil
+  }
   func detach() {
     highlightTask?.cancel()
+    highlightedRanges.removeAll()
+    bracketRanges.removeAll()
+    diagnosticRanges.removeAll()
+    pendingScroll = nil
     NotificationCenter.default.removeObserver(self)
     if let lm = editor.layoutManager { document.storage.removeLayoutManager(lm) }
   }
@@ -353,17 +412,17 @@ import TCodeCore
     ruler.needsDisplay = true
   }
   func textViewDidChangeSelection(_ notification: Notification) {
+    let text = (editor.textStorage?.mutableString as NSString?) ?? (editor.string as NSString)
     selectionChanged?(
-      PositionMap.position(in: editor.string, utf16Offset: editor.selectedRange().location))
+      document.lineIndex.position(in: text, utf16Offset: editor.selectedRange().location))
     ruler.needsDisplay = true
     editor.needsDisplay = true
     matchBracket()
   }
   func matchBracket() {
     guard let lm = editor.layoutManager else { return }
-    lm.removeTemporaryAttribute(
-      .backgroundColor, forCharacterRange: NSRange(location: 0, length: document.storage.length))
-    let ns = editor.string as NSString
+    clearBracketHighlights()
+    let ns = (editor.textStorage?.mutableString as NSString?) ?? (editor.string as NSString)
     let cursor = editor.selectedRange().location
     guard cursor > 0, cursor <= ns.length, !document.large else { return }
     let value = ns.character(at: cursor - 1)
@@ -382,9 +441,10 @@ import TCodeCore
       if c == target { depth -= 1 }
       if depth == 0 {
         for index in [i, cursor - 1] {
+          let range = NSRange(location: index, length: 1)
           lm.addTemporaryAttribute(
-            .backgroundColor, value: Style.matchingBracket,
-            forCharacterRange: NSRange(location: index, length: 1))
+            .backgroundColor, value: Style.matchingBracket, forCharacterRange: range)
+          bracketRanges.append(range)
         }
         break
       }
@@ -392,16 +452,33 @@ import TCodeCore
       steps += 1
     }
   }
+  private func clearBracketHighlights() {
+    guard let lm = editor.layoutManager else {
+      bracketRanges.removeAll()
+      return
+    }
+    let length = document.storage.length
+    for range in bracketRanges {
+      let location = min(max(0, range.location), length)
+      let safe = NSRange(location: location, length: min(max(0, range.length), length - location))
+      if safe.length > 0 {
+        lm.removeTemporaryAttribute(.backgroundColor, forCharacterRange: safe)
+      }
+    }
+    bracketRanges.removeAll()
+  }
   func highlight() {
     highlightTask?.cancel()
     if document.languageOverride == "text" {
-      editor.layoutManager?.removeTemporaryAttribute(
-        .foregroundColor, forCharacterRange: NSRange(location: 0, length: document.storage.length))
+      clearHighlighted()
       document.syntaxStatus = "Plain text"
       syntaxChanged?()
       return
     }
-    guard !document.large else { return }
+    guard !document.large else {
+      clearHighlighted()
+      return
+    }
     let text = editor.string
     let version = document.version
     let grammarID = document.grammarID
@@ -418,9 +495,7 @@ import TCodeCore
           guard let self, self.document.version == version, self.document.grammarID == grammarID,
             !Task.isCancelled, let lm = self.editor.layoutManager
           else { return }
-          lm.removeTemporaryAttribute(
-            .foregroundColor,
-            forCharacterRange: NSRange(location: 0, length: self.document.storage.length))
+          self.clearHighlighted()
           for span in parsed
           where span.location >= 0 && span.length >= 0
             && span.location <= self.document.storage.length
@@ -435,7 +510,9 @@ import TCodeCore
             case "comment": color = Style.syntaxComment
             default: color = Style.editorText
             }
-            lm.addTemporaryAttribute(.foregroundColor, value: color, forCharacterRange: span.range)
+            let range = NSRange(location: span.location, length: span.length)
+            lm.addTemporaryAttribute(.foregroundColor, value: color, forCharacterRange: range)
+            self.highlightedRanges.append(range)
           }
           self.document.syntaxStatus = "Tree-sitter"
           self.syntaxChanged?()
@@ -465,20 +542,35 @@ import TCodeCore
       guard let self, self.document.version == version, !Task.isCancelled,
         let lm = self.editor.layoutManager
       else { return }
-      lm.removeTemporaryAttribute(
-        .foregroundColor,
-        forCharacterRange: NSRange(location: 0, length: self.document.storage.length))
+      self.clearHighlighted()
       let colors: [NSColor] = [
         Style.syntaxKeyword, Style.syntaxNumber, Style.syntaxType, Style.syntaxString,
         Style.syntaxComment,
       ]
       for (range, index) in spans {
         lm.addTemporaryAttribute(.foregroundColor, value: colors[index], forCharacterRange: range)
+        self.highlightedRanges.append(range)
       }
     }
   }
+  private func clearHighlighted() {
+    guard let lm = editor.layoutManager else {
+      highlightedRanges.removeAll()
+      return
+    }
+    let length = document.storage.length
+    for range in highlightedRanges {
+      let location = min(max(0, range.location), length)
+      let safe = NSRange(location: location, length: min(max(0, range.length), length - location))
+      if safe.length > 0 {
+        lm.removeTemporaryAttribute(.foregroundColor, forCharacterRange: safe)
+      }
+    }
+    highlightedRanges.removeAll()
+  }
   func go(to position: Position, encoding: String = "utf-16") {
-    let offset = PositionMap.offset(in: document.text, position: position, encoding: encoding)
+    let offset = document.lineIndex.offset(
+      in: document.storage.mutableString, position: position, encoding: encoding)
     editor.setSelectedRange(NSRange(location: offset, length: 0))
     editor.scrollRangeToVisible(editor.selectedRange())
     view.window?.makeFirstResponder(editor)

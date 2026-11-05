@@ -14,6 +14,9 @@ struct EditorConfiguration {
     if let tabs = languageDefaults?.useTabs { result.useTabs = tabs }
     let global = UserDefaults.standard.integer(forKey: "indentWidth")
     if global > 0 { result.indentSize = global }
+    if UserDefaults.standard.object(forKey: "useTabs") != nil {
+      result.useTabs = UserDefaults.standard.bool(forKey: "useTabs")
+    }
     if let names = UserDefaults.standard.stringArray(forKey: "exclusions") {
       result.exclusions.formUnion(names)
     }

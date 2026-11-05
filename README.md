@@ -1,6 +1,6 @@
 # tCode
 
-tCode 0.2 is a native AppKit/SwiftUI code editor and initial IDE for **macOS 27 on Apple Silicon**. The editor, window system, PTY terminal, LSP client, DAP client, and Git UI run natively. The app has no browser renderer, JavaScript runtime, local server, account, or telemetry.
+tCode 0.2 is a native AppKit/SwiftUI code editor and initial IDE for **macOS 27 on Apple Silicon**. The editor, window system, PTY terminal, LSP client, DAP client, Git UI, optional AI agent panel, and in-app marketplace run natively. The app has no browser renderer, JavaScript runtime, local server, account, or telemetry.
 
 This is an initial implementation with an extensible language foundation. Python, C/C++, and Swift configurations are bundled. Rust is an optional catalog configuration installed without rebuilding the app. Language support is separate from compilers, interpreters, and SDKs. Read the [feature matrix](docs/STATUS.md) for the current boundaries and [contributing guide](CONTRIBUTING.md) for development and release checks.
 
@@ -24,15 +24,16 @@ tCode opens on its welcome page, with no file and no folder loaded. Recent folde
 1. Choose **File → Open Folder** (⇧⌘O) or **New Project Folder** (⌥⌘N). Opening a folder does not run its tasks or tools. The project name titles the sidebar above its file list.
 2. Create nested folders with **File → New Folder** (⌃⌘N) and files with the sidebar context menu or Command Palette (⇧⌘P). New File (⌘N) creates an untitled buffer; Save (⌘S) chooses its location.
 3. Use Quick Open (⌘P), Go to Line (⌘L), Find in File (⌘F), and workspace regex search (⇧⌘F). The palette includes a reviewed workspace replacement command.
-4. Open **Settings → Language Support** to inspect Installed packs and the Catalog. Configure existing tools, explicitly Validate them, or review an installation plan. **Editor → Document Language…** selects Automatic, Plain Text, or an installed language for ambiguous files and untitled buffers. Choose **Editor → Enable Language Tools** explicitly to connect a server. Missing support leaves editing available.
-5. Use Build (⌘B), Run (⌘R), and Test (⌘U) from the Run menu. **Edit Run Configuration** stores executable, arguments, environment, working directory, Python interpreter, and debug program in `.tcode/run.json`. Execution occurs only on your command.
-6. Open a real zsh terminal with ⇧⌘` or the panel's + button. The palette switches or closes terminal sessions.
+4. Open **Settings → Language Support** to inspect Installed packs and the Catalog, or **Settings → Marketplace** for the discovery surface. Configure existing tools, explicitly Validate them, or review an installation plan. **Editor → Document Language…** selects Automatic, Plain Text, or an installed language for ambiguous files and untitled buffers. Choose **Editor → Enable Language Tools** explicitly to connect a server. Missing support leaves editing available.
+5. Open the **Agent** panel from the toolbar or **View → Toggle Agent** (⌥⌘A). Configure an OpenAI-compatible endpoint, model, and API key in **Settings → Agent**. The agent runs only when you send a message; file writes and commands require approval. The key is stored in the macOS Keychain.
+6. Use Build (⌘B), Run (⌘R), and Test (⌘U) from the Run menu. **Edit Run Configuration** stores executable, arguments, environment, working directory, Python interpreter, and debug program in `.tcode/run.json`. Execution occurs only on your command.
+7. Open a real zsh terminal with ⇧⌘` or the panel's + button. The palette switches or closes terminal sessions.
 
-Editor tabs have no close button: close one with ⌘W, or right-click it for Close Tab, Close Other Tabs, Close All Tabs, Reveal in Finder, and Copy Path.
+Editor tabs show a dirty dot and a close affordance on hover; close one with ⌘W, or right-click it for Close Tab, Close Other Tabs, Close All Tabs, Reveal in Finder, and Copy Path.
 
 Toggle a breakpoint at the caret with ⇧⌘Y or click the gutter. Choose Start Debugging, then use the Run menu for stepping, call stack, variables, and saved watches. Debugging requires a saved file and an available adapter. Build C++, Swift, and Rust targets with debug symbols before launching LLDB.
 
-Settings (⌘,) provides appearance, editor font/size, indentation, autosave, Language Support, and menu shortcut overrides. New panes adopt editor preferences. Workspace settings and the supported EditorConfig subset are documented in [setup](docs/SETUP.md).
+Settings (⌘,) provides appearance, editor font/size, indentation, autosave, Language Support, Marketplace, Agent provider settings, and menu shortcut overrides. New panes adopt editor preferences. Workspace settings and the supported EditorConfig subset are documented in [setup](docs/SETUP.md).
 
 ## Optional language tools
 
@@ -64,7 +65,7 @@ swift test --arch arm64
 
 See [validation and measured performance](docs/VALIDATION.md), [architecture](docs/ARCHITECTURE.md), [feature status](docs/STATUS.md), and [dependency notices](docs/THIRD-PARTY.md). Screenshots in `artifacts/` show the actual native application. The packaged release is `dist/tCode.app`; its verified review archive is `dist/tCode-0.2.0-macOS27-arm64.zip`. Run `python3 scripts/verify-release.py` to prepare and verify that local archive without publishing it.
 
-AI chat, provider APIs, coding agents, and the planned language-setup skill are not part of this release. The language platform remains usable without an AI account.
+The AI agent is optional and provider-agnostic. It sends a request only when you send a message, uses an OpenAI-compatible endpoint you configure, stores the API key in the macOS Keychain, and asks for approval before writing files or running commands. The language platform and marketplace remain usable without an AI account. The marketplace installs reviewed, hashed language/tool packs and imports declarative theme/snippet JSON packs; it does not execute arbitrary plugin code.
 
 ![tCode Rust editor with native syntax highlighting](artifacts/rust-editor.png)
 

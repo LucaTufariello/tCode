@@ -19,6 +19,14 @@ final class FoldingLayoutManager: NSLayoutManager, @preconcurrency NSLayoutManag
     } else {
       folded.append(range)
     }
+    invalidateAllGlyphs()
+  }
+  /// Restores folds saved with a document's view state without toggling them.
+  func restore(_ ranges: [NSRange]) {
+    folded = ranges.filter { $0.length > 0 }
+    invalidateAllGlyphs()
+  }
+  private func invalidateAllGlyphs() {
     if let textStorage {
       invalidateGlyphs(
         forCharacterRange: NSRange(location: 0, length: textStorage.length), changeInLength: 0,

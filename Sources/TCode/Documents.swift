@@ -1,9 +1,20 @@
 import AppKit
 import TCodeCore
 
+/// Per-pane editor state. It lives with the document so switching tabs can rebuild a pane
+/// without losing the caret, scroll position, folds, or secondary cursors.
+struct EditorViewState {
+  var selection = NSRange(location: 0, length: 0)
+  var additionalCursors: [Int] = []
+  var folded: [NSRange] = []
+  var scrollOrigin = NSPoint.zero
+}
+
 @MainActor final class CodeDocument: NSObject, @preconcurrency NSTextStorageDelegate {
   let id: UUID
   var url: URL?
+  /// Resolved identity used by the document pool and workspace edits.
+  var canonicalURL: URL?
   let storage: NSTextStorage
   let undo = UndoManager()
   var baseline: Data?
@@ -11,6 +22,12 @@ import TCodeCore
   var bom = Data()
   var version = 1
   var isSaving = false
+  /// Cheap UI dirtiness. Exact `modified` is reserved for save/close/quit decisions.
+  var isDirty = false
+  var lineIndex: LineIndex
+  var lineEnding = "LF"
+  var viewStates: [EditorViewState] = []
+  var splitCount = 1
   var listeners: [UUID: () -> Void] = [:]
   func notify() { for listener in listeners.values { listener() } }
   var recoveryTask: Task<Void, Never>?
@@ -22,9 +39,12 @@ import TCodeCore
   var grammarID: String?
   var highlightQuery: String?
   var languageComment: String?
+  var languageKey: String?
+  var cachedMatch: LanguageMatch?
   var syntaxStatus = "Basic highlighting"
   var title: String { url?.lastPathComponent ?? "Untitled" }
   var text: String { storage.string }
+  /// Exact comparison. This encodes the whole buffer, so it must stay off the keystroke path.
   var modified: Bool { (try? encoded()) != baseline && !(baseline == nil && text.isEmpty) }
   var large: Bool { storage.length > 2_000_000 }
   static let recovery = RecoveryStore(
@@ -34,14 +54,31 @@ import TCodeCore
       ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(
         "Library/Application Support/tCode/Recovery"))
   init(url: URL? = nil, file: TextFile? = nil, recovery: RecoveryRecord? = nil) {
+    let initialText = recovery?.text ?? file?.text ?? ""
     id = recovery?.id ?? UUID()
     self.url = url
-    storage = NSTextStorage(string: recovery?.text ?? file?.text ?? "")
+    storage = NSTextStorage(string: initialText)
+    lineIndex = LineIndex(text: initialText)
     baseline = recovery?.baseline ?? file?.bytes
     encoding = recovery.map { String.Encoding(rawValue: $0.encoding) } ?? file?.encoding ?? .utf8
     bom = recovery?.bom ?? file?.bom ?? Data()
     super.init()
+    canonicalURL = url?.resolvingSymlinksInPath().standardizedFileURL
+    isDirty = recovery != nil
+    lineEnding = Self.detectLineEnding(storage.mutableString)
     storage.delegate = self
+  }
+  private static func detectLineEnding(_ text: NSString) -> String {
+    var index = 0
+    while index < text.length {
+      let unit = text.character(at: index)
+      if unit == 13 {
+        return index + 1 < text.length && text.character(at: index + 1) == 10 ? "CRLF" : "CR"
+      }
+      if unit == 10 { return "LF" }
+      index += 1
+    }
+    return "LF"
   }
   func encoded() throws -> Data {
     guard let bytes = text.data(using: encoding, allowLossyConversion: false) else {
@@ -54,21 +91,37 @@ import TCodeCore
     range editedRange: NSRange, changeInLength delta: Int
   ) {
     guard editedMask.contains(.editedCharacters) else { return }
+    isDirty = true
     version += 1
+    let text = storage.mutableString
+    lineIndex.applyEdit(text: text, editedRange: editedRange, delta: delta)
+    var index = min(max(0, editedRange.location), text.length)
+    let end = min(NSMaxRange(editedRange), text.length)
+    var hasLineBreak = false
+    while index < end {
+      let unit = text.character(at: index)
+      if unit == 10 || unit == 13 {
+        hasLineBreak = true
+        break
+      }
+      index += 1
+    }
+    if hasLineBreak { lineEnding = Self.detectLineEnding(text) }
     recoveryTask?.cancel()
-    let record = recoveryRecord()
-    let dirty = modified
-    recoveryTask = Task {
+    notify()
+    languageSession?.changed(self)
+    // Snapshot only after the debounce. Building a recovery record on every keystroke copied
+    // the full buffer and baseline even when the user was still typing.
+    recoveryTask = Task { @MainActor [weak self] in
       try? await Task.sleep(for: .milliseconds(350))
-      guard !Task.isCancelled else { return }
-      if dirty {
+      guard let self, !Task.isCancelled else { return }
+      let record = self.recoveryRecord()
+      if self.isDirty {
         try? await Self.recovery.write(record)
       } else {
         try? await Self.recovery.remove(record.id)
       }
     }
-    notify()
-    languageSession?.changed(self)
   }
   func recoveryRecord() -> RecoveryRecord {
     RecoveryRecord(
@@ -85,17 +138,15 @@ import TCodeCore
     }.value
     let oldURL = url
     url = destination
+    canonicalURL = destination.resolvingSymlinksInPath().standardizedFileURL
     baseline = data
+    isDirty = false
     if oldURL != url {
       languageSession?.close(self, url: oldURL)
       languageSession = nil
     }
     recoveryTask?.cancel()
-    if modified {
-      try await Self.recovery.write(recoveryRecord())
-    } else {
-      try await Self.recovery.remove(id)
-    }
+    try? await Self.recovery.remove(id)
     notify()
   }
   func reload() async throws {
@@ -111,8 +162,12 @@ import TCodeCore
     encoding = file.encoding
     bom = file.bom
     storage.replaceCharacters(in: NSRange(location: 0, length: storage.length), with: file.text)
+    lineIndex = LineIndex(text: storage.mutableString)
+    lineEnding = Self.detectLineEnding(storage.mutableString)
+    isDirty = false
+    recoveryTask?.cancel()
     undo.removeAllActions()
-    try await Self.recovery.remove(id)
+    try? await Self.recovery.remove(id)
     notify()
   }
 }
@@ -122,15 +177,14 @@ import TCodeCore
   var documents: [CodeDocument] = []
   func open(_ url: URL) async throws -> CodeDocument {
     let canonical = url.resolvingSymlinksInPath().standardizedFileURL
-    if let existing = documents.first(where: {
-      $0.url?.resolvingSymlinksInPath().standardizedFileURL == canonical
-    }) {
+    if let existing = documents.first(where: { $0.canonicalURL == canonical }) {
       return existing
     }
     let file = try await Task.detached {
       try TextFile(data: Data(contentsOf: canonical, options: .mappedIfSafe))
     }.value
     let doc = CodeDocument(url: url, file: file)
+    doc.canonicalURL = canonical
     documents.append(doc)
     return doc
   }
@@ -141,6 +195,7 @@ import TCodeCore
       doc.languageSession = nil
       doc.url =
         old == from ? to : URL(fileURLWithPath: to.path + old.path.dropFirst(from.path.count))
+      doc.canonicalURL = doc.url?.resolvingSymlinksInPath().standardizedFileURL
       if doc.modified {
         let record = doc.recoveryRecord()
         Task { try? await CodeDocument.recovery.write(record) }

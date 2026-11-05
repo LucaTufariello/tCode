@@ -9,6 +9,7 @@ typealias Position = TCodeCore.Position
   let directory: Bool
   let symlink: Bool
   var children: [FileNode]?
+  weak var parent: FileNode?
   var loading = false
   init(_ url: URL, directory: Bool, symlink: Bool = false) {
     self.url = url
@@ -16,6 +17,9 @@ typealias Position = TCodeCore.Position
     self.symlink = symlink
   }
 }
+
+/// A save panel was dismissed. This is not an error worth showing to the user.
+struct SaveCancelled: Error {}
 
 @MainActor
 final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineViewDataSource,
@@ -38,15 +42,25 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
   var sidebarBack: NSButton!
   var sidebarEmptyState: NSView!
   var tabBar: NSView!
+  var tabStrip: TabStripView!
+  let breadcrumb = BreadcrumbBar()
   var tabBarWidth: NSLayoutConstraint!
   var filesScroll: NSScrollView!
   var navigator: NavigatorList?
   let tabs = NSStackView(), contentStack = NSStackView(), panelStack = NSStackView()
   let status = StatusLabel(labelWithString: "Ready")
-  var statusInfo: NSTextField!
+  let statusRight = NSStackView()
+  let statusPosition = NSTextField(labelWithString: "")
+  let statusIndent = NSButton()
+  let statusEncoding = NSTextField(labelWithString: "")
+  let statusEOL = NSTextField(labelWithString: "")
+  let statusLanguage = NSButton()
+  let statusTools = NSTextField(labelWithString: "")
   var panelAddButton: NSButton!
-  let inspectorText = NSTextField(wrappingLabelWithString: "")
-  let output = NSTextView(), debugOutput = NSTextView(), problems = NSTextView()
+  let inspectorView = InspectorView()
+  let output = NSTextView(), debugOutput = NSTextView()
+  let problemsView = ProblemsView()
+  var problemsWidthConstraint: NSLayoutConstraint?
   var terminalViews: [LocalProcessTerminalView] = []
   var selectedPanel = 2
   let panelSelector = NSSegmentedControl(
@@ -71,6 +85,14 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
   var palette: PaletteController?
   var linkHandler: OutputLinkHandler!
   var workspaceRegistry: LanguagePackRegistry?
+  var agentPanel: AgentPanel?
+  var agentItem: NSSplitViewItem?
+  var inspectorItem: NSSplitViewItem?
+  var tabDocuments: [UUID] = []
+  var statusTask: Task<Void, Never>?
+  var lastInspectorKey: String?
+  var languageRevision = 0
+  var isClosingAfterPrompt = false
   var packs: [LanguagePack] { workspaceRegistry?.packs ?? LanguageEnvironment.shared.packs }
   var selectedURL: URL? {
     (outline.item(atRow: outline.selectedRow) as? FileNode)?.url ?? active?.url
@@ -133,6 +155,8 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
       object: nil)
     NotificationCenter.default.addObserver(
       self, selector: #selector(toolSettingsChanged), name: .tcodeToolSettingsChanged, object: nil)
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(themeChanged), name: .tcodeThemeChanged, object: nil)
     if let root { loadWorkspace(root) }
   }
   required init?(coder: NSCoder) { fatalError() }
@@ -151,7 +175,19 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     side.orientation = .vertical
     side.spacing = 8
     side.edgeInsets = Style.sidebarInsets
-    sidebar.view = container(side)
+    let backdrop = NSVisualEffectView()
+    backdrop.material = .sidebar
+    backdrop.blendingMode = .behindWindow
+    backdrop.state = .followsWindowActiveState
+    side.translatesAutoresizingMaskIntoConstraints = false
+    backdrop.addSubview(side)
+    NSLayoutConstraint.activate([
+      side.topAnchor.constraint(equalTo: backdrop.safeAreaLayoutGuide.topAnchor),
+      side.bottomAnchor.constraint(equalTo: backdrop.bottomAnchor),
+      side.leadingAnchor.constraint(equalTo: backdrop.leadingAnchor),
+      side.trailingAnchor.constraint(equalTo: backdrop.trailingAnchor),
+    ])
+    sidebar.view = backdrop
     let titleRow = NSStackView()
     titleRow.orientation = .horizontal
     titleRow.spacing = 6
@@ -166,7 +202,7 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     titleRow.addArrangedSubview(sidebarBack)
     let projectIcon = NSImageView(
       image: NSImage(systemSymbolName: "folder.fill", accessibilityDescription: nil)!)
-    projectIcon.contentTintColor = .controlAccentColor
+    projectIcon.contentTintColor = .secondaryLabelColor
     projectIcon.symbolConfiguration = NSImage.SymbolConfiguration(
       pointSize: 12, weight: .semibold)
     sidebarIcon = projectIcon
@@ -246,6 +282,7 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     contentStack.orientation = .vertical
     contentStack.distribution = .fill
     contentStack.spacing = 0
+    contentStack.detachesHiddenViews = true
     content.view = container(contentStack)
     tabs.orientation = .horizontal
     tabs.alignment = .centerY
@@ -254,6 +291,7 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     // The row scrolls sideways once it is wider than the bar. The scroll view may widen its
     // document view, but the tab stack inside keeps its natural width and simply stays put.
     let strip = TabStripView()
+    tabStrip = strip
     strip.translatesAutoresizingMaskIntoConstraints = false
     contentStack.addArrangedSubview(strip)
     strip.heightAnchor.constraint(equalToConstant: Style.tabStripHeight).isActive = true
@@ -280,36 +318,62 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     tabBarWidth = tabs.widthAnchor.constraint(equalToConstant: 0)
     NSLayoutConstraint.activate([
       tabs.leadingAnchor.constraint(equalTo: tabRow.leadingAnchor, constant: 8),
-      tabs.topAnchor.constraint(equalTo: tabRow.topAnchor, constant: 6),
-      tabs.bottomAnchor.constraint(equalTo: tabRow.bottomAnchor, constant: -6),
+      tabs.topAnchor.constraint(equalTo: tabRow.topAnchor, constant: 3),
+      tabs.bottomAnchor.constraint(equalTo: tabRow.bottomAnchor, constant: -3),
       tabBarWidth,
     ])
+    contentStack.addArrangedSubview(breadcrumb)
+    breadcrumb.heightAnchor.constraint(equalToConstant: 24).isActive = true
     vertical.splitView.isVertical = false
     editorSplit.splitView.isVertical = true
     contentStack.addArrangedSubview(vertical.view)
     // The message sits on the left and may truncate; the cursor position, document format and
     // tool state sit on the right, flush with the panel selector above.
     let statusBar = StatusBarView()
-    statusInfo = NSTextField(labelWithString: "")
-    statusInfo.font = Style.statusInfo
-    statusInfo.textColor = .secondaryLabelColor
-    statusInfo.alignment = .right
-    statusInfo.setAccessibilityLabel("Cursor position and document format")
     status.font = Style.caption
     status.textColor = .secondaryLabelColor
     status.lineBreakMode = .byTruncatingTail
     status.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-    statusInfo.setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
-    for label in [status, statusInfo!] {
-      label.translatesAutoresizingMaskIntoConstraints = false
-      statusBar.addSubview(label)
+    statusRight.orientation = .horizontal
+    statusRight.spacing = 10
+    statusRight.alignment = .centerY
+    statusRight.setContentHuggingPriority(.defaultHigh, for: .horizontal)
+    statusRight.setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
+    for label in [statusPosition, statusEncoding, statusEOL, statusTools] {
+      label.font = Style.statusInfo
+      label.textColor = .secondaryLabelColor
+      label.lineBreakMode = .byTruncatingTail
+      label.setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
+    }
+    for button in [statusIndent, statusLanguage] {
+      button.isBordered = false
+      button.font = Style.caption
+      button.contentTintColor = .secondaryLabelColor
+      button.target = self
+      button.setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
+    }
+    statusIndent.action = #selector(changeIndentation)
+    statusIndent.toolTip = "Indentation"
+    statusLanguage.action = #selector(changeLanguage)
+    statusLanguage.toolTip = "Document language"
+    statusRight.addArrangedSubview(statusPosition)
+    statusRight.addArrangedSubview(statusIndent)
+    statusRight.addArrangedSubview(statusEncoding)
+    statusRight.addArrangedSubview(statusEOL)
+    statusRight.addArrangedSubview(statusLanguage)
+    statusRight.addArrangedSubview(statusTools)
+    statusPosition.setAccessibilityLabel("Cursor position")
+    statusRight.setAccessibilityLabel("Document format and tool state")
+    for view in [status, statusRight] {
+      view.translatesAutoresizingMaskIntoConstraints = false
+      statusBar.addSubview(view)
     }
     NSLayoutConstraint.activate([
       status.leadingAnchor.constraint(equalTo: statusBar.leadingAnchor, constant: 14),
       status.centerYAnchor.constraint(equalTo: statusBar.centerYAnchor),
-      statusInfo.trailingAnchor.constraint(equalTo: statusBar.trailingAnchor, constant: -14),
-      statusInfo.centerYAnchor.constraint(equalTo: statusBar.centerYAnchor),
-      statusInfo.leadingAnchor.constraint(
+      statusRight.trailingAnchor.constraint(equalTo: statusBar.trailingAnchor, constant: -14),
+      statusRight.centerYAnchor.constraint(equalTo: statusBar.centerYAnchor),
+      statusRight.leadingAnchor.constraint(
         greaterThanOrEqualTo: status.trailingAnchor, constant: 12),
     ])
     contentStack.addArrangedSubview(statusBar)
@@ -338,8 +402,8 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     glass.contentView = panelHeader
     glass.effectIsInteractive = true
     panelStack.addArrangedSubview(glass)
-    glass.heightAnchor.constraint(equalToConstant: 43).isActive = true
-    for text in [output, debugOutput, problems] {
+    glass.heightAnchor.constraint(equalToConstant: Style.panelHeaderHeight).isActive = true
+    for text in [output, debugOutput] {
       text.isEditable = false
       text.isRichText = false
       text.font = Style.mono
@@ -356,24 +420,18 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
       text.maxSize = NSSize(
         width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
       text.setAccessibilityLabel(
-        text === output ? "Build output" : text === problems ? "Problems" : "Debug console")
+        text === output ? "Build output" : "Debug console")
     }
     linkHandler = OutputLinkHandler(self)
     output.delegate = linkHandler
-    problems.delegate = linkHandler
     debugOutput.delegate = linkHandler
+    problemsView.open = { [weak self] problem in
+      guard let self, let url = problem.url else { return }
+      self.open(
+        url, position: Position(line: problem.line, character: problem.column))
+    }
     showPanelContent()
-    let heading = NSTextField(labelWithString: "Document")
-    heading.font = Style.sectionTitle
-    heading.textColor = .secondaryLabelColor
-    inspectorText.font = Style.callout
-    let details = NSStackView(views: [heading, inspectorText])
-    details.orientation = .vertical
-    details.alignment = .leading
-    details.spacing = 10
-    details.edgeInsets = NSEdgeInsets(top: 18, left: 16, bottom: 18, right: 16)
-    details.setAccessibilityLabel("Document inspector")
-    inspector.view = details
+    inspector.view = inspectorView
     showWelcome()
     updateSidebarTitle()
     updateStatus()
@@ -385,9 +443,19 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     outer.addSplitViewItem(sideItem)
     outer.addSplitViewItem(NSSplitViewItem(viewController: content))
     let inspectorItem = NSSplitViewItem(inspectorWithViewController: inspector)
-    inspectorItem.minimumThickness = 200
+    inspectorItem.minimumThickness = Style.inspectorWidth
     inspectorItem.isCollapsed = true
     outer.addSplitViewItem(inspectorItem)
+    self.inspectorItem = inspectorItem
+    let agent = AgentPanel(workspace: self)
+    agentPanel = agent
+    let agentItem = NSSplitViewItem(viewController: agent)
+    agentItem.minimumThickness = 280
+    agentItem.maximumThickness = 480
+    agentItem.canCollapse = true
+    agentItem.isCollapsed = true
+    outer.addSplitViewItem(agentItem)
+    self.agentItem = agentItem
     vertical.addSplitViewItem(NSSplitViewItem(viewController: editorSplit))
     let bottom = NSSplitViewItem(viewController: panel)
     bottom.minimumThickness = 120
@@ -395,7 +463,7 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     bottom.isCollapsed = true
     vertical.addSplitViewItem(bottom)
     // The stack centres its rows by default, so the rows are pinned to the full column width.
-    for v in [strip, vertical.view, statusBar] {
+    for v in [strip, breadcrumb, vertical.view, statusBar] {
       v.widthAnchor.constraint(equalTo: contentStack.widthAnchor).isActive = true
     }
   }
@@ -412,6 +480,9 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     return view
   }
   func showWelcome() {
+    tabStrip?.isHidden = true
+    breadcrumb.isHidden = true
+    selectInOutline(nil)
     let vc = NSViewController()
     let stack = NSStackView()
     stack.orientation = .vertical
@@ -420,41 +491,44 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     let icon = NSImageView(image: NSApp.applicationIconImage)
     icon.imageScaling = .scaleProportionallyUpOrDown
     icon.setAccessibilityLabel("tCode")
-    icon.widthAnchor.constraint(equalToConstant: 76).isActive = true
-    icon.heightAnchor.constraint(equalToConstant: 76).isActive = true
+    icon.widthAnchor.constraint(equalToConstant: 64).isActive = true
+    icon.heightAnchor.constraint(equalToConstant: 64).isActive = true
     let title = NSTextField(labelWithString: "tCode")
     title.font = Style.displayTitle
-    let subtitle = NSTextField(labelWithString: "A quiet place to build.")
+    let subtitle = NSTextField(labelWithString: "A native code editor for macOS")
     subtitle.font = Style.body
     subtitle.textColor = .secondaryLabelColor
     let actions = NSStackView()
-    actions.orientation = .vertical
-    actions.spacing = 10
-    for (label, id) in [
-      ("Open Folder…", "openFolder"), ("Create Project…", "newProject"), ("New File", "newFile"),
+    actions.orientation = .horizontal
+    actions.spacing = 8
+    for (label, id, symbol, primary) in [
+      ("Open Folder…", "openFolder", "folder", true),
+      ("New Project…", "newProject", "plus.square", false),
+      ("New File", "newFile", "doc.badge.plus", false),
     ] {
       let b = NSButton(title: label, target: self, action: #selector(welcomeAction(_:)))
       b.identifier = .init(id)
       b.bezelStyle = .rounded
       b.controlSize = .large
-      b.widthAnchor.constraint(equalToConstant: 232).isActive = true
-      if id == "openFolder" { b.keyEquivalent = "\r" }
+      b.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+      b.imagePosition = .imageLeading
+      if primary { b.keyEquivalent = "\r" }
       actions.addArrangedSubview(b)
     }
     stack.addArrangedSubview(icon)
-    stack.setCustomSpacing(18, after: icon)
+    stack.setCustomSpacing(16, after: icon)
     stack.addArrangedSubview(title)
-    stack.setCustomSpacing(6, after: title)
+    stack.setCustomSpacing(4, after: title)
     stack.addArrangedSubview(subtitle)
-    stack.setCustomSpacing(32, after: subtitle)
+    stack.setCustomSpacing(24, after: subtitle)
     stack.addArrangedSubview(actions)
     let recents =
       (UserDefaults.standard.stringArray(forKey: "recentProjects") ?? [])
       .filter { FileManager.default.fileExists(atPath: $0) }
-      .prefix(5)
+      .prefix(8)
     if !recents.isEmpty {
-      stack.setCustomSpacing(36, after: actions)
-      stack.addArrangedSubview(recentCard(Array(recents)))
+      stack.setCustomSpacing(28, after: actions)
+      stack.addArrangedSubview(recentList(Array(recents)))
     }
     let holder = NSView()
     holder.addSubview(stack)
@@ -462,6 +536,7 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     NSLayoutConstraint.activate([
       stack.centerXAnchor.constraint(equalTo: holder.centerXAnchor),
       stack.centerYAnchor.constraint(equalTo: holder.centerYAnchor),
+      stack.widthAnchor.constraint(lessThanOrEqualToConstant: 640),
       stack.leadingAnchor.constraint(greaterThanOrEqualTo: holder.leadingAnchor, constant: 24),
       stack.trailingAnchor.constraint(lessThanOrEqualTo: holder.trailingAnchor, constant: -24),
       stack.topAnchor.constraint(greaterThanOrEqualTo: holder.topAnchor, constant: 24),
@@ -474,13 +549,17 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     guard let path = sender.representedPath else { return }
     (NSApp.delegate as? AppDelegate)?.newWindow(URL(fileURLWithPath: path))
   }
-  /// Recent projects as a soft card: the name leads, the path whispers underneath.
-  func recentCard(_ paths: [String]) -> NSView {
-    let card = CardView()
+  /// Recent projects as a quiet list: the name leads, the path whispers underneath.
+  func recentList(_ paths: [String]) -> NSView {
     let rows = NSStackView()
     rows.orientation = .vertical
     rows.alignment = .leading
     rows.spacing = 2
+    let header = NSTextField(labelWithString: "RECENT PROJECTS")
+    header.font = Style.sectionTitle
+    header.textColor = .tertiaryLabelColor
+    rows.addArrangedSubview(header)
+    rows.setCustomSpacing(6, after: header)
     for path in paths {
       let button = NSButton(title: "", target: self, action: #selector(openRecentProject(_:)))
       button.isBordered = false
@@ -492,25 +571,10 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
       button.representedPath = path
       button.toolTip = path
       button.setAccessibilityLabel("Open recent project " + path)
-      button.widthAnchor.constraint(equalToConstant: 238).isActive = true
+      button.widthAnchor.constraint(equalToConstant: 520).isActive = true
       rows.addArrangedSubview(button)
     }
-    let header = NSTextField(labelWithString: "RECENT PROJECTS")
-    header.font = Style.sectionTitle
-    header.textColor = .tertiaryLabelColor
-    let content = NSStackView(views: [header, rows])
-    content.orientation = .vertical
-    content.alignment = .leading
-    content.spacing = 10
-    card.addSubview(content)
-    content.translatesAutoresizingMaskIntoConstraints = false
-    NSLayoutConstraint.activate([
-      content.topAnchor.constraint(equalTo: card.topAnchor, constant: 12),
-      content.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -12),
-      content.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 14),
-      content.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -14),
-    ])
-    return card
+    return rows
   }
   /// Two-line recent-project label: name in primary weight, home-relative path underneath.
   func recentTitle(_ path: String) -> NSAttributedString {
@@ -548,6 +612,7 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
         directory: languageRegistry.directory, bundledPacks: LanguagePack.bundled())
       _ = workspaceRegistry?.reload(workspace: url, allowWorkspacePacks: true)
     }
+    languageRevision += 1
     rootNode = FileNode(url, directory: true)
     reloadTree()
     updateSidebarTitle()
@@ -621,10 +686,16 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
           .value
         let existing = Dictionary(uniqueKeysWithValues: (node.children ?? []).map { ($0.url, $0) })
         node.children = entries.map {
-          existing[$0.url] ?? FileNode($0.url, directory: $0.directory, symlink: $0.symlink)
+          let child =
+            existing[$0.url] ?? FileNode($0.url, directory: $0.directory, symlink: $0.symlink)
+          child.parent = node
+          return child
         }
         node.loading = false
         outline.reloadItem(node === rootNode ? nil : node, reloadChildren: true)
+        if let activeURL = active?.url {
+          DispatchQueue.main.async { [weak self] in self?.selectInOutline(activeURL) }
+        }
         if refresh {
           for child in node.children ?? [] where child.children != nil {
             loadChildren(child, refresh: true)
@@ -661,10 +732,12 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
       image: NSImage(
         systemSymbolName: n.directory ? "folder" : symbol(n.url.pathExtension),
         accessibilityDescription: nil)!)
-    image.contentTintColor = n.directory ? .controlAccentColor : .secondaryLabelColor
+    image.contentTintColor = n.directory ? .secondaryLabelColor : .tertiaryLabelColor
     let label = NSTextField(labelWithString: n.url.lastPathComponent)
     label.lineBreakMode = .byTruncatingMiddle
-    label.font = Style.body
+    let isActive = active?.url.map { sameFile($0, n.url) } ?? false
+    label.font = isActive ? NSFont.systemFont(ofSize: 12, weight: .medium) : Style.body
+    label.textColor = .labelColor
     let stack = NSStackView(views: [image, label])
     stack.spacing = 7
     cell.addSubview(stack)
@@ -717,6 +790,35 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
   @objc func openSelected() {
     if let n = outline.item(atRow: outline.clickedRow) as? FileNode { openNode(n) }
   }
+  /// Keeps the sidebar selection on the file that is actually open, so the tree and the tab
+  /// strip agree about the current document.
+  func selectInOutline(_ url: URL?) {
+    guard let url, let rootNode, let node = findNode(url, in: rootNode) else {
+      outline.deselectAll(nil)
+      return
+    }
+    var ancestor = node.parent
+    while let current = ancestor {
+      outline.expandItem(current)
+      ancestor = current.parent
+    }
+    let row = outline.row(forItem: node)
+    if row >= 0 {
+      outline.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+      outline.scrollRowToVisible(row)
+    }
+  }
+  private func findNode(_ url: URL, in node: FileNode) -> FileNode? {
+    if !node.directory, sameFile(node.url, url) { return node }
+    for child in node.children ?? [] {
+      if let found = findNode(url, in: child) { return found }
+    }
+    return nil
+  }
+  private func sameFile(_ first: URL, _ second: URL) -> Bool {
+    first.resolvingSymlinksInPath().standardizedFileURL
+      == second.resolvingSymlinksInPath().standardizedFileURL
+  }
   func openNode(_ node: FileNode) {
     if node.directory {
       outline.isItemExpanded(node) ? outline.collapseItem(node) : outline.expandItem(node)
@@ -745,7 +847,7 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     sidebarTitle.stringValue = root?.lastPathComponent ?? "tCode"
     sidebarTitle.toolTip = root?.path ?? "No folder open"
     sidebarIcon.isHidden = false
-    sidebarIcon.contentTintColor = .controlAccentColor
+    sidebarIcon.contentTintColor = .secondaryLabelColor
     sidebarBack.isHidden = true
     navigator = nil
     replaceNavigator(with: root == nil ? sidebarEmptyState : filesScroll)
@@ -803,11 +905,13 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
           }
         }
       }
-      if UserDefaults.standard.bool(forKey: "autosave"), let document, document.url != nil {
+      if UserDefaults.standard.bool(forKey: "autosave"), let document, document.url != nil,
+        document.isDirty
+      {
         document.autosaveTask?.cancel()
         document.autosaveTask = Task {
           try? await Task.sleep(for: .seconds(1))
-          guard !Task.isCancelled, let url = document.url else { return }
+          guard !Task.isCancelled, let url = document.url, document.isDirty else { return }
           do { try await document.save(to: url) } catch {
             self.status.stringValue = error.localizedDescription
           }
@@ -858,19 +962,37 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
         (old, PositionMap.position(in: editor.string, utf16Offset: editor.selectedRange().location))
       )
     }
+    savePaneStates()
     active = document
+    tabStrip?.isHidden = false
+    breadcrumb.isHidden = false
+    selectInOutline(document.url)
+    agentPanel?.refreshContext()
+    updateBreadcrumb()
     configureLanguage(document)
     for pane in panes { pane.detach() }
     for item in editorSplit.splitViewItems { editorSplit.removeSplitViewItem(item) }
     panes.removeAll()
-    addPane(document)
+    let count = max(1, min(4, document.splitCount))
+    for index in 0..<count { addPane(document, index: index) }
     updateTabs()
-    updateStatus()
+    updateStatus(immediate: true)
     window?.representedURL = document.url
     window?.makeFirstResponder(editor)
     if languageEnabled { activateLanguage(document) }
   }
-  func addPane(_ document: CodeDocument) {
+  /// Captures caret, scroll, folds, cursors, and split count before panes are torn down.
+  private func savePaneStates() {
+    guard let document = active else { return }
+    let count = max(1, panes.count)
+    while document.viewStates.count < count { document.viewStates.append(EditorViewState()) }
+    if document.viewStates.count > count {
+      document.viewStates.removeSubrange(count...)
+    }
+    for (index, pane) in panes.enumerated() { pane.saveState(at: index) }
+    document.splitCount = count
+  }
+  func addPane(_ document: CodeDocument, index: Int = 0) {
     let pane = EditorPane(document: document)
     panes.append(pane)
     editorSplit.addSplitViewItem(NSSplitViewItem(viewController: pane))
@@ -891,21 +1013,41 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
       self.breakpoints[url] = pane.ruler.breakpoints
       self.debugSession?.setBreakpoints(url, lines: Array(pane.ruler.breakpoints))
     }
+    pane.restoreState(at: index)
+  }
+  func updateBreadcrumb() {
+    breadcrumb.update(path: active?.url?.path)
   }
   func updateTabs() {
-    for v in tabs.arrangedSubviews {
-      tabs.removeArrangedSubview(v)
-      v.removeFromSuperview()
+    let ids = documents.map(\.id)
+    if ids != tabDocuments || tabs.arrangedSubviews.count != documents.count {
+      for v in tabs.arrangedSubviews {
+        tabs.removeArrangedSubview(v)
+        v.removeFromSuperview()
+      }
+      for doc in documents {
+        let tab = TabButton(document: doc)
+        tab.workspace = self
+        tab.target = self
+        tab.action = #selector(tabSelected(_:))
+        tab.onClose = { [weak self, weak doc] in
+          guard let self, let doc else { return }
+          self.closeTab(doc)
+        }
+        tab.selected = active === doc
+        tab.modified = doc.isDirty
+        tab.toolTip = doc.url?.path ?? "Untitled document"
+        tabs.addArrangedSubview(tab)
+      }
+      tabDocuments = ids
+    } else {
+      for (view, doc) in zip(tabs.arrangedSubviews, documents) {
+        (view as? TabButton)?.update(selected: active === doc)
+      }
     }
-    for doc in documents {
-      let tab = TabButton(document: doc)
-      tab.target = self
-      tab.action = #selector(tabSelected(_:))
-      tab.selected = active === doc
-      tab.modified = doc.modified
-      tab.toolTip = doc.url?.path ?? "Untitled document"
-      tabs.addArrangedSubview(tab)
-    }
+    updateTabBarWidth()
+  }
+  private func updateTabBarWidth() {
     // Tabs keep their natural width and sit side by side from the left instead of being
     // stretched apart to fill the bar.
     let widths = tabs.arrangedSubviews.map(\.fittingSize.width)
@@ -925,17 +1067,40 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     for other in documents where other !== doc { closeTab(other) }
   }
   func closeAllTabs() { for doc in documents { closeTab(doc) } }
-  func updateStatus(_ position: Position? = nil) {
-    guard let doc = active else {
-      status.stringValue = root?.path ?? "Open a folder or create a file to begin"
-      statusInfo.stringValue = ""
-      inspectorText.stringValue = ""
+  func updateStatus(_ position: Position? = nil, immediate: Bool = false) {
+    statusTask?.cancel()
+    if immediate {
+      renderStatus(position)
       return
     }
+    let documentID = active?.id
+    statusTask = Task { @MainActor [weak self, position, documentID] in
+      try? await Task.sleep(for: .milliseconds(50))
+      guard let self, !Task.isCancelled, self.active?.id == documentID else { return }
+      self.renderStatus(position)
+    }
+  }
+  private func renderStatus(_ position: Position?) {
+    guard let doc = active else {
+      status.stringValue = root?.path ?? "Open a folder or create a file to begin"
+      statusRight.isHidden = true
+      statusPosition.stringValue = ""
+      statusIndent.title = ""
+      statusEncoding.stringValue = ""
+      statusEOL.stringValue = ""
+      statusLanguage.title = ""
+      statusTools.stringValue = ""
+      inspectorView.update(
+        document: nil, root: root, breakpoints: [], openDocuments: documents.count)
+      lastInspectorKey = nil
+      return
+    }
+    let text = doc.storage.mutableString
     let p =
       position
-      ?? PositionMap.position(in: doc.text, utf16Offset: editor?.selectedRange().location ?? 0)
-    let lineEnding = doc.text.contains("\r\n") ? "CRLF" : doc.text.contains("\r") ? "CR" : "LF"
+      ?? doc.lineIndex.position(
+        in: text, utf16Offset: editor?.selectedRange().location ?? 0)
+    let lineEnding = doc.lineEnding
     let indent = editor?.indent ?? "    "
     let tools =
       doc.large
@@ -945,77 +1110,88 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
         doc.syntaxStatus == "Tree-sitter" ? "Tree-sitter" : "",
         debugSession?.stopped == true ? "Debugger paused" : "",
       ].filter { !$0.isEmpty }.joined(separator: " · ")
-    statusInfo.stringValue = [
-      recognizeLanguage(doc)?.association.languageID.uppercased() ?? "TEXT",
-      "Ln \(p.line+1), Col \(p.character+1)",
-      indent.first == "\t" ? "Tabs: \(indent.count)" : "Spaces: \(indent.count)",
-      doc.encoding == .utf8 ? "UTF-8" : "UTF-16", lineEnding, tools,
-    ].filter { !$0.isEmpty }.joined(separator: "   ")
-    inspectorText.attributedStringValue = inspectorSummary(doc)
-    inspectorText.toolTip = doc.syntaxStatus
+    statusRight.isHidden = false
+    statusPosition.stringValue = "Ln \(p.line+1), Col \(p.character+1)"
+    statusIndent.title = indent.first == "\t" ? "Tabs: \(indent.count)" : "Spaces: \(indent.count)"
+    statusEncoding.stringValue = doc.encoding == .utf8 ? "UTF-8" : "UTF-16"
+    statusEOL.stringValue = lineEnding
+    statusLanguage.title = recognizeLanguage(doc)?.association.languageID.uppercased() ?? "TEXT"
+    statusTools.stringValue = tools
+    statusTools.isHidden = tools.isEmpty
+    let documentBreakpoints = doc.url.flatMap { breakpoints[$0] } ?? []
+    let inspectorKey = [
+      doc.id.uuidString, doc.url?.path ?? "", String(doc.isDirty), doc.languagePackID ?? "",
+      doc.syntaxStatus, doc.languageSession?.ready == true ? "1" : "0",
+      String(documentBreakpoints.count), String(documents.count),
+    ].joined(separator: "|")
+    if inspectorKey != lastInspectorKey {
+      lastInspectorKey = inspectorKey
+      inspectorView.update(
+        document: doc, root: root, breakpoints: documentBreakpoints,
+        openDocuments: documents.count)
+    }
   }
-  /// The document inspector: name first, then the facts, each line a step quieter.
-  func inspectorSummary(_ doc: CodeDocument) -> NSAttributedString {
-    let paragraph = NSMutableParagraphStyle()
-    paragraph.lineSpacing = 3
-    let result = NSMutableAttributedString()
-    result.append(
-      NSAttributedString(
-        string: doc.title + "\n",
-        attributes: [
-          .font: Style.projectTitle, .foregroundColor: NSColor.labelColor,
-          .paragraphStyle: paragraph,
-        ]))
-    result.append(
-      NSAttributedString(
-        string: (doc.url?.path ?? "Unsaved document") + "\n\n",
-        attributes: [
-          .font: Style.callout, .foregroundColor: NSColor.secondaryLabelColor,
-          .paragraphStyle: paragraph,
-        ]))
-    result.append(
-      NSAttributedString(
-        string: "\(doc.storage.length.formatted()) UTF-16 units · "
-          + "\(doc.modified ? "Modified" : "Saved")\n",
-        attributes: [
-          .font: Style.callout, .foregroundColor: NSColor.secondaryLabelColor,
-          .paragraphStyle: paragraph,
-        ]))
-    result.append(
-      NSAttributedString(
-        string: recognizeLanguage(doc)?.pack.name
-          ?? "Text — choose a language with Editor → Document Language",
-        attributes: [
-          .font: Style.callout, .foregroundColor: NSColor.tertiaryLabelColor,
-          .paragraphStyle: paragraph,
-        ]))
-    return result
+  @objc func changeLanguage() { selectLanguage() }
+  @objc func changeIndentation() {
+    let menu = NSMenu()
+    for spaces in [2, 4, 8] {
+      let item = NSMenuItem(
+        title: "Spaces: \(spaces)", action: #selector(setIndentation(_:)), keyEquivalent: "")
+      item.target = self
+      item.representedObject = spaces
+      menu.addItem(item)
+    }
+    let tabs = NSMenuItem(title: "Tabs", action: #selector(setIndentation(_:)), keyEquivalent: "")
+    tabs.target = self
+    tabs.representedObject = -1
+    menu.addItem(tabs)
+    menu.popUp(
+      positioning: nil, at: NSPoint(x: 0, y: statusIndent.bounds.height), in: statusIndent)
+  }
+  @objc func setIndentation(_ item: NSMenuItem) {
+    let value = item.representedObject as? Int ?? 4
+    UserDefaults.standard.set(value < 0 ? 0 : value, forKey: "indentWidth")
+    UserDefaults.standard.set(value < 0, forKey: "useTabs")
+    for pane in panes {
+      pane.editor.indent = value < 0 ? "\t" : String(repeating: " ", count: value)
+    }
+    updateStatus(immediate: true)
   }
   func save(_ doc: CodeDocument, asNew: Bool = false, onSuccess: (() -> Void)? = nil) {
+    Task {
+      do {
+        try await saveDocument(doc, asNew: asNew)
+        updateBreadcrumb()
+        reloadTree()
+        if let url = doc.url, let service = doc.languageSession {
+          try? await service.connection.notify(
+            "textDocument/didSave", params: ["textDocument": ["uri": url.absoluteString]])
+        }
+        updateTabs()
+        if languageEnabled { activateLanguage(doc) }
+        onSuccess?()
+      } catch is SaveCancelled {
+        return
+      } catch {
+        resolveConflict(doc, error: error)
+      }
+    }
+  }
+  /// Saves without the post-save UI work. Used by the close/quit prompts, which must know
+  /// whether the save actually completed before allowing the window to disappear.
+  func saveDocument(_ doc: CodeDocument, asNew: Bool = false) async throws {
     var destination = asNew ? nil : doc.url
     if destination == nil {
       let p = NSSavePanel()
       p.nameFieldStringValue = doc.title
       p.directoryURL = root
-      if p.runModal() != .OK { return }
-      destination = p.url
+      guard p.runModal() == .OK, let url = p.url else { throw SaveCancelled() }
+      destination = url
     }
-    guard let destination else { return }
-    Task {
-      do {
-        try await doc.save(
-          to: destination,
-          overwrite: asNew && FileManager.default.fileExists(atPath: destination.path))
-        reloadTree()
-        if let service = doc.languageSession {
-          try? await service.connection.notify(
-            "textDocument/didSave", params: ["textDocument": ["uri": destination.absoluteString]])
-        }
-        updateTabs()
-        if languageEnabled { activateLanguage(doc) }
-        onSuccess?()
-      } catch { resolveConflict(doc, error: error) }
-    }
+    guard let destination else { throw SaveCancelled() }
+    try await doc.save(
+      to: destination,
+      overwrite: asNew && FileManager.default.fileExists(atPath: destination.path))
   }
   func resolveConflict(_ doc: CodeDocument, error: Error) {
     let alert = NSAlert()
@@ -1051,6 +1227,7 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
   }
   func closeTab() {
     guard let doc = active else { return }
+    doc.autosaveTask?.cancel()
     let sharedElsewhere =
       (NSApp.delegate as? AppDelegate)?.windows.contains {
         $0 !== self && $0.documents.contains(where: { $0 === doc })
@@ -1094,6 +1271,7 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
       for item in editorSplit.splitViewItems { editorSplit.removeSplitViewItem(item) }
       showWelcome()
       updateTabs()
+      updateBreadcrumb()
       updateStatus()
     }
     persist()
@@ -1106,7 +1284,24 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
   func windowDidBecomeKey(_ notification: Notification) {
     applyPendingLayout()
   }
+  @objc func themeChanged() {
+    for pane in panes { pane.themeChanged() }
+    for text in [output, debugOutput] {
+      text.backgroundColor = Style.editorBackground
+      text.textColor = Style.editorText
+    }
+    problemsView.themeChanged()
+    agentPanel?.themeChanged()
+    for terminal in terminalViews {
+      terminal.nativeBackgroundColor = Style.editorBackground
+      terminal.nativeForegroundColor = Style.editorText
+    }
+    breadcrumb.needsDisplay = true
+    for view in tabs.arrangedSubviews { view.needsDisplay = true }
+    window?.contentView?.needsDisplay = true
+  }
   @objc func toolSettingsChanged() {
+    languageRevision += 1
     for service in services.values { service.stop() }
     services.removeAll()
     for doc in documents { doc.languageSession = nil }
@@ -1220,19 +1415,93 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     }
     persist()
     cleanup()
+    releaseDocuments()
     (NSApp.delegate as? AppDelegate)?.windows.removeAll { $0 === self }
   }
-  func windowShouldClose(_ sender: NSWindow) -> Bool {
-    for doc in documents where doc.modified {
-      let record = doc.recoveryRecord()
-      Task { try? await CodeDocument.recovery.write(record) }
+  /// Drops documents and per-document tasks that no other window still owns.
+  func releaseDocuments() {
+    let others = (NSApp.delegate as? AppDelegate)?.windows.filter { $0 !== self } ?? []
+    for doc in documents {
+      let shared = others.contains { window in window.documents.contains { $0 === doc } }
+      guard !shared else { continue }
+      doc.autosaveTask?.cancel()
+      doc.recoveryTask?.cancel()
+      doc.languageSession = nil
+      DocumentPool.shared.documents.removeAll { $0 === doc }
     }
-    return true
+  }
+  enum CloseDecision { case save, keepRecovery, discard, cancel }
+  func confirmClose(_ docs: [CodeDocument]) -> CloseDecision {
+    guard !docs.isEmpty else { return .discard }
+    let alert = NSAlert()
+    alert.messageText =
+      docs.count == 1
+      ? "Save changes to \(docs[0].title)?" : "Save changes to \(docs.count) documents?"
+    alert.informativeText =
+      "Choose Save, keep recovery copies for the next launch, or discard the changes."
+    alert.addButton(withTitle: "Save")
+    alert.addButton(withTitle: "Keep Recovery")
+    alert.addButton(withTitle: "Discard Changes")
+    alert.addButton(withTitle: "Cancel")
+    switch alert.runModal() {
+    case .alertFirstButtonReturn: return .save
+    case .alertSecondButtonReturn: return .keepRecovery
+    case .alertThirdButtonReturn: return .discard
+    default: return .cancel
+    }
+  }
+  func windowShouldClose(_ sender: NSWindow) -> Bool {
+    if isClosingAfterPrompt { return true }
+    let modified = documents.filter { $0.modified }
+    guard !modified.isEmpty else { return true }
+    switch confirmClose(modified) {
+    case .cancel:
+      return false
+    case .discard:
+      for doc in modified {
+        doc.autosaveTask?.cancel()
+        doc.recoveryTask?.cancel()
+        Task { try? await CodeDocument.recovery.remove(doc.id) }
+      }
+      return true
+    case .keepRecovery:
+      isClosingAfterPrompt = true
+      Task {
+        do {
+          for doc in modified {
+            doc.recoveryTask?.cancel()
+            try await CodeDocument.recovery.write(doc.recoveryRecord())
+          }
+        } catch {
+          isClosingAfterPrompt = false
+          report(error)
+          return
+        }
+        sender.close()
+      }
+      return false
+    case .save:
+      isClosingAfterPrompt = true
+      Task {
+        do {
+          for doc in modified { try await saveDocument(doc) }
+        } catch is SaveCancelled {
+          isClosingAfterPrompt = false
+          return
+        } catch {
+          isClosingAfterPrompt = false
+          report(error)
+          return
+        }
+        sender.close()
+      }
+      return false
+    }
   }
   func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
     [
-      .toggleSidebar, .flexibleSpace, .init("quickOpen"), .init("run"), .init("panel"),
-      .init("inspector"),
+      .toggleSidebar, .flexibleSpace, .init("quickOpen"), .init("run"), .init("agent"),
+      .init("panel"), .init("inspector"),
     ]
   }
   func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -1245,6 +1514,7 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     if id == .toggleSidebar { return nil }
     let names = [
       "quickOpen": ("magnifyingglass", "Quick Open"), "run": ("play", "Run"),
+      "agent": ("bubble.left.and.bubble.right", "Agent"),
       "panel": ("rectangle.bottomthird.inset.filled", "Toggle Bottom Panel"),
       "inspector": ("sidebar.right", "Toggle Inspector"),
     ]
@@ -1259,11 +1529,21 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     return item
   }
   @objc func toolbarAction(_ sender: NSToolbarItem) { perform(sender.itemIdentifier.rawValue) }
+  func toggleAgent() {
+    guard let item = agentItem else { return }
+    if item.isCollapsed { inspectorItem?.isCollapsed = true }
+    item.isCollapsed.toggle()
+    if !item.isCollapsed {
+      agentPanel?.refreshContext()
+      if let input = agentPanel?.input { window?.makeFirstResponder(input) }
+    }
+  }
   @objc func changePanel(_ sender: NSSegmentedControl) {
     selectedPanel = sender.selectedSegment
     showPanelContent()
   }
   func showPanelContent() {
+    problemsWidthConstraint?.isActive = false
     while panelStack.arrangedSubviews.count > 1 {
       let v = panelStack.arrangedSubviews.last!
       panelStack.removeArrangedSubview(v)
@@ -1281,8 +1561,15 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
             symbol: "terminal", title: "No terminal sessions yet",
             button: "Start zsh Terminal", action: #selector(newTerminal)))
       }
+    } else if selectedPanel == 1 {
+      if problemsWidthConstraint == nil {
+        problemsWidthConstraint = problemsView.view.widthAnchor.constraint(
+          equalTo: panelStack.widthAnchor)
+      }
+      problemsWidthConstraint?.isActive = true
+      panelStack.addArrangedSubview(problemsView.view)
     } else {
-      let tv = selectedPanel == 1 ? problems : selectedPanel == 2 ? output : debugOutput
+      let tv = selectedPanel == 2 ? output : debugOutput
       let sc = NSScrollView()
       sc.hasVerticalScroller = true
       sc.autohidesScrollers = true
@@ -1374,6 +1661,68 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
 
 /// The tab strip surface: a quiet band one shade away from the editor, so the selected tab
 /// reads as lifted and continuous with the page below.
+/// A quiet path line between the tabs and the editor. It keeps the active file's location
+/// visible without adding another toolbar.
+@MainActor final class BreadcrumbBar: NSView {
+  private let stack = NSStackView()
+  private var lastPath: String?
+
+  override init(frame frameRect: NSRect) {
+    super.init(frame: frameRect)
+    stack.orientation = .horizontal
+    stack.alignment = .centerY
+    stack.spacing = 4
+    stack.edgeInsets = NSEdgeInsets(top: 0, left: 10, bottom: 0, right: 10)
+    stack.translatesAutoresizingMaskIntoConstraints = false
+    addSubview(stack)
+    NSLayoutConstraint.activate([
+      stack.leadingAnchor.constraint(equalTo: leadingAnchor),
+      stack.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor),
+      stack.centerYAnchor.constraint(equalTo: centerYAnchor),
+    ])
+    setAccessibilityLabel("File path")
+  }
+  required init?(coder: NSCoder) { fatalError() }
+
+  func update(path: String?) {
+    guard path != lastPath else { return }
+    lastPath = path
+    for view in stack.arrangedSubviews {
+      stack.removeArrangedSubview(view)
+      view.removeFromSuperview()
+    }
+    guard let path else { return }
+    var components = URL(fileURLWithPath: path).pathComponents.filter { $0 != "/" }
+    if components.count > 4 {
+      components = ["…"] + Array(components.suffix(3))
+    }
+    for (index, component) in components.enumerated() {
+      if index > 0 {
+        let chevron = NSImageView(
+          image: NSImage(systemSymbolName: "chevron.right", accessibilityDescription: nil)!)
+        chevron.contentTintColor = .tertiaryLabelColor
+        chevron.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 8, weight: .medium)
+        stack.addArrangedSubview(chevron)
+      }
+      let label = NSTextField(labelWithString: component)
+      label.font =
+        index == components.count - 1
+        ? NSFont.systemFont(ofSize: 12, weight: .medium) : Style.caption
+      label.textColor = index == components.count - 1 ? .labelColor : .tertiaryLabelColor
+      label.lineBreakMode = .byTruncatingMiddle
+      label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+      stack.addArrangedSubview(label)
+    }
+  }
+
+  override func draw(_ dirtyRect: NSRect) {
+    Style.editorBackground.setFill()
+    bounds.fill()
+    Style.subtleSeparator.setFill()
+    NSRect(x: 0, y: 0, width: bounds.width, height: 1).fill()
+  }
+}
+
 @MainActor final class TabStripView: NSView {
   override func draw(_ dirtyRect: NSRect) {
     Style.tabStripBackground.setFill()
@@ -1386,20 +1735,6 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
   override func draw(_ dirtyRect: NSRect) {
     Style.subtleSeparator.setFill()
     NSRect(x: 0, y: bounds.maxY - 1, width: bounds.width, height: 1).fill()
-  }
-}
-
-/// A quiet rounded card: the welcome screen's recent projects and similar grouped rows.
-@MainActor final class CardView: NSView {
-  override func draw(_ dirtyRect: NSRect) {
-    let path = NSBezierPath(
-      roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: Style.cardRadius,
-      yRadius: Style.cardRadius)
-    Style.card.setFill()
-    path.fill()
-    Style.separator.setStroke()
-    path.lineWidth = 1
-    path.stroke()
   }
 }
 
@@ -1422,12 +1757,13 @@ extension NSButton {
   }
 }
 
-/// A single editor tab, drawn as a quiet rounded chip: the selected tab carries the editor's own
-/// surface so it reads as part of the page below, unselected tabs fade back, and hovering lifts
-/// them. A dot marks unsaved changes. Tabs carry no close button; they are dismissed with
-/// \u{2318}W or from the tab context menu.
+/// A flat editor tab. The active tab carries the editor surface so it reads as continuous with
+/// the page below; inactive tabs stay quiet. A dot marks unsaved changes and becomes a close
+/// affordance on hover.
 @MainActor final class TabButton: NSControl {
   let document: CodeDocument
+  weak var workspace: WorkspaceWindow?
+  var onClose: (() -> Void)?
   var modified = false {
     didSet {
       invalidateIntrinsicContentSize()
@@ -1445,25 +1781,40 @@ extension NSButton {
     didSet { needsDisplay = true }
   }
   private var hoverTracking: NSTrackingArea?
+  private var lastTitle = ""
   init(document: CodeDocument) {
     self.document = document
     super.init(frame: NSRect(x: 0, y: 0, width: 120, height: Style.tabHeight))
+    lastTitle = document.title
     setAccessibilityRole(.button)
     setAccessibilityLabel("Editor tab, " + document.title)
   }
   required init?(coder: NSCoder) { fatalError() }
+  /// Updates the visible state without rebuilding the tab view on every keystroke.
+  func update(selected: Bool) {
+    if self.selected != selected { self.selected = selected }
+    if modified != document.isDirty { modified = document.isDirty }
+    toolTip = document.url?.path ?? "Untitled document"
+    guard lastTitle != document.title else { return }
+    lastTitle = document.title
+    setAccessibilityLabel("Editor tab, " + document.title)
+    invalidateIntrinsicContentSize()
+    needsDisplay = true
+  }
+  private var closeRect: NSRect {
+    NSRect(x: bounds.maxX - 20, y: 0, width: 20, height: bounds.height)
+  }
   override var intrinsicContentSize: NSSize {
     let font = Style.tabTitle(selected: selected)
     let width = ceil((document.title as NSString).size(withAttributes: [.font: font]).width)
-    return NSSize(
-      width: min(width + 20 + (modified ? 12 : 0), Style.tabMaxWidth), height: Style.tabHeight)
+    return NSSize(width: min(width + 30, Style.tabMaxWidth), height: Style.tabHeight)
   }
   override func updateTrackingAreas() {
     super.updateTrackingAreas()
     if let hoverTracking { removeTrackingArea(hoverTracking) }
     let area = NSTrackingArea(
-      rect: bounds, options: [.mouseEnteredAndExited, .activeInKeyWindow], owner: self,
-      userInfo: nil)
+      rect: bounds, options: [.mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect],
+      owner: self, userInfo: nil)
     addTrackingArea(area)
     hoverTracking = area
   }
@@ -1471,41 +1822,52 @@ extension NSButton {
   override func mouseExited(with event: NSEvent) { hovered = false }
   override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
   override func mouseUp(with event: NSEvent) {
-    guard bounds.contains(convert(event.locationInWindow, from: nil)), let action else {
-      return super.mouseUp(with: event)
+    let point = convert(event.locationInWindow, from: nil)
+    guard bounds.contains(point) else { return super.mouseUp(with: event) }
+    if hovered, closeRect.contains(point) {
+      onClose?()
+      return
     }
-    sendAction(action, to: target)
+    if let action { sendAction(action, to: target) }
   }
   override func draw(_ dirtyRect: NSRect) {
-    let chip = bounds.insetBy(dx: 0.5, dy: 0.5)
-    let path = NSBezierPath(
-      roundedRect: chip, xRadius: Style.tabRadius, yRadius: Style.tabRadius)
     if selected {
       Style.editorBackground.setFill()
-      path.fill()
-      Style.separator.setStroke()
-      path.lineWidth = 1
-      path.stroke()
+      bounds.fill()
+      NSColor.controlAccentColor.setFill()
+      NSRect(x: 8, y: 0, width: max(0, bounds.width - 16), height: 2).fill()
     } else if hovered {
-      NSColor.labelColor.withAlphaComponent(0.06).setFill()
-      path.fill()
+      NSColor.labelColor.withAlphaComponent(0.05).setFill()
+      bounds.fill()
+    }
+    if !selected {
+      Style.subtleSeparator.setFill()
+      NSRect(x: bounds.maxX - 1, y: 5, width: 1, height: bounds.height - 10).fill()
     }
     let font = Style.tabTitle(selected: selected)
     let paragraph = NSMutableParagraphStyle()
     paragraph.lineBreakMode = .byTruncatingTail
     let attributes: [NSAttributedString.Key: Any] = [
       .font: font,
-      .foregroundColor: selected ? Style.editorText : NSColor.secondaryLabelColor,
+      .foregroundColor: selected ? NSColor.labelColor : NSColor.secondaryLabelColor,
       .paragraphStyle: paragraph,
     ]
     let height = ceil(font.ascender - font.descender)
     let rect = NSRect(
-      x: chip.minX + 10, y: chip.midY - height / 2,
-      width: max(4, chip.width - 20 - (modified ? 12 : 0)), height: height)
+      x: 10, y: bounds.midY - height / 2, width: max(4, bounds.width - 30), height: height)
     (document.title as NSString).draw(in: rect, withAttributes: attributes)
-    if modified {
+    let markRect = NSRect(x: bounds.maxX - 17, y: bounds.midY - 5, width: 10, height: 10)
+    if hovered {
+      let mark = NSAttributedString(
+        string: "✕",
+        attributes: [
+          .font: NSFont.systemFont(ofSize: 9, weight: .medium),
+          .foregroundColor: NSColor.secondaryLabelColor,
+        ])
+      mark.draw(in: markRect)
+    } else if modified {
       NSColor.controlAccentColor.setFill()
-      NSBezierPath(ovalIn: NSRect(x: chip.maxX - 15, y: chip.midY - 2.5, width: 5, height: 5))
+      NSBezierPath(ovalIn: NSRect(x: markRect.midX - 2.5, y: markRect.midY - 2.5, width: 5, height: 5))
         .fill()
     }
   }
@@ -1527,7 +1889,7 @@ extension NSButton {
     return menu
   }
   @objc private func tabMenuAction(_ item: NSMenuItem) {
-    guard let owner = (NSApp.delegate as? AppDelegate)?.current else { return }
+    guard let owner = workspace ?? (NSApp.delegate as? AppDelegate)?.current else { return }
     switch item.representedObject as? String {
     case "close": owner.closeTab(document)
     case "closeOthers": owner.closeOtherTabs(document)

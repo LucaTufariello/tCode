@@ -9,6 +9,10 @@ tCode targets macOS 27 on Apple Silicon with Xcode 27 / Swift 6.4. Keep the appl
 | Configuration interface, migration, recognition | `Sources/TCodeCore/LanguagePack.swift`, `LanguagePackDefaults.swift`, `LanguagePackRegistry.swift` |
 | Catalog, installation plans, ownership and health | `Sources/TCodeCore/LanguageCatalog.swift`, `ToolInstaller.swift`, `ToolHealth.swift`, `PythonWheelLock.swift` |
 | Native settings and document selection | `Sources/TCode/LanguageSupportView.swift`, `LanguageRuntime.swift`, `WorkspaceWindow.swift` |
+| UI design system and window chrome | `Sources/TCode/Style.swift`, `WorkspaceWindow.swift`, `BreadcrumbBar`, `TabButton` |
+| Problems and document inspector | `Sources/TCode/ProblemsView.swift`, `InspectorView.swift`, `WorkspaceWindow.swift` |
+| AI agent panel and provider settings | `Sources/TCode/AgentPanel.swift`, `AgentClient.swift`, `AgentSettings.swift`, `AgentSettingsView.swift`, `Keychain.swift` |
+| Marketplace, themes, and snippets | `Sources/TCode/MarketplaceView.swift`, `ThemeStore.swift`, `SnippetStore.swift`, `LanguageSupportView.swift`, `TCodeCore/LanguageCatalog.swift` |
 | LSP, formatting, tasks and DAP | `Sources/TCode/LanguageTools.swift`, `Commands.swift`, `TasksAndGit.swift`, `DebugSession.swift` |
 | Native syntax transport and installation | `Sources/TCodeCore/SyntaxConnection.swift`, `SyntaxProtocol.swift`, `SyntaxInstaller.swift` |
 | Syntax worker and editor integration | `Sources/TCodeSyntax/NativeSyntaxParser.swift`, `TCodeSyntaxService/main.swift`, `TCode/SyntaxClient.swift`, `TCode/Editor.swift` |

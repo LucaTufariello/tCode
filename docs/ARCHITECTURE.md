@@ -34,11 +34,21 @@ The native Language Support page exposes independent recognition/highlighting/in
 
 Grammar archives pin source revision, arm64 module/query/archive hashes, runtime ABI, and licenses. The installer verifies contents and uses the actual sandboxed worker to compile queries and validate ABI before activation. It passes a read-only module file descriptor, source text, and query data over XPC; it grants no workspace path or network entitlement. Only the helper has the library-validation exception needed for curated downloaded code. Worker crashes/errors preserve the editor and reconnect on subsequent requests. See [syntax boundaries and packaged isolation checks](SYNTAX.md). This ad hoc distribution is not a substitute for a Developer ID/notarization release process.
 
-This is not a general binary/plugin host. No VS Code extension package, Marketplace request, JavaScript extension runtime, AI provider, or remote coding service is involved.
+This is not a general binary/plugin host. Marketplace packs are declarative data (language, tool, theme, and snippet metadata); no VS Code extension package, JavaScript extension runtime, or arbitrary third-party code host is involved. The optional AI agent talks to a provider endpoint the user configures; tCode does not bundle an account, model, or remote coding service.
 
 `RunningProcess` performs blocking pipe reads off the UI thread, streams stdout/stderr, writes stdin concurrently, checks cancellation before/after launch, and signals its own child process group with TERM then KILL. Background search forwards parent cancellation to detached work. Formatters use stdout separately so stderr cannot become source text. Protocol sessions request orderly shutdown/disconnect. Quit awaits workspace shutdown before replying to AppKit; normal workspace closure cancels tools and terminal sessions.
 
 Git invokes `/usr/bin/git` directly with argument arrays and parses NUL-delimited porcelain status, including rename records. It does not interpolate filenames or commit text into shell commands. Branch switching requires saved buffers and a clean Git workspace, then reloads clean documents. Unmerged files block commits.
+
+## Agent and marketplace
+
+`AgentPanel` is a native AppKit conversation surface in the right split view. It is created lazily, collapsed by default, and does nothing until the user sends a message. `AgentClient` speaks the OpenAI-compatible chat-completions streaming protocol over HTTPS, accumulates function calls, and yields deltas; the panel owns the conversation and tool loop. Provider endpoint, model, system prompt, and tool policy live in `AgentConfiguration`; the API key is stored in the macOS Keychain. There is no telemetry, background polling, or bundled provider account.
+
+Tools are explicit and workspace-scoped: `read_file`, `list_files`, and `search_workspace` are read-only; `write_file` and `run_command` require a native approval alert. Paths are resolved against the workspace root and rejected when they escape it. Writes use the existing atomic `FileIO.save` conflict check and refuse to overwrite a modified open buffer. Commands use `RunningProcess` with captured output. The agent loop is bounded by `maxIterations` and can be stopped at any time.
+
+`MarketplaceView` is the in-app discovery surface for the existing reviewed language/tool catalog. It reuses `LanguageEnvironment`, `LanguageCatalog`, and `ToolInstaller`; installation still goes through the reviewed plan sheet, hashes, prerequisites, and activation checks. Theme and snippet packs are declarative JSON imported into tCode support directories: `ThemeStore` supplies editor colors through `Style`, and `SnippetStore` merges pack snippets into the existing language snippet menu. Neither executes code.
+
+The UI uses AppKit for the window, sidebar, tabs, editor, panels, and agent surface; SwiftUI is limited to Settings. Chrome uses semantic system colors and materials, a 24pt status bar, a 32pt flat tab strip, and a breadcrumb line. The editor remains native `NSTextView`/TextKit 1.
 
 ## macOS 27 design
 

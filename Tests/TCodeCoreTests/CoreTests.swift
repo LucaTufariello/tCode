@@ -237,4 +237,17 @@ final class CoreTests: XCTestCase {
     XCTAssertEqual(indexed.count, 1000)
     XCTAssertEqual(hits.count, 60000)
   }
+  func testRecoveryReadTolerantSkipsCorruptRecords() async throws {
+    let root = try temporary()
+    defer { try? FileManager.default.removeItem(at: root) }
+    let store = RecoveryStore(directory: root)
+    let record = RecoveryRecord(id: UUID(), path: nil, text: "unsaved", baseline: nil)
+    try await store.write(record)
+    try Data("not json".utf8).write(to: root.appendingPathComponent("broken.json"))
+    let result = await store.readTolerant()
+    XCTAssertEqual(result.records.count, 1)
+    XCTAssertEqual(result.records.first?.text, "unsaved")
+    XCTAssertEqual(result.failures.count, 1)
+    XCTAssertTrue(result.failures.first?.contains("broken.json") == true)
+  }
 }

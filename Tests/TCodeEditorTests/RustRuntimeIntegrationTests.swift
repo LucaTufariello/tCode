@@ -184,10 +184,10 @@ final class RustRuntimeIntegrationTests: XCTestCase {
         action: "Insert syntax error")
       try await waitFor("Rust diagnostics in the native Problems panel") {
         !(workspace.diagnosticList[file.absoluteString] ?? []).isEmpty
-          && !workspace.problems.string.contains("No problems detected.")
+          && !workspace.problemsView.snapshot.isEmpty
       }
       let diagnosticCount = workspace.diagnosticList[file.absoluteString]?.count ?? 0
-      XCTAssertTrue(workspace.problems.string.contains("main.rs:"))
+      XCTAssertTrue(workspace.problemsView.snapshot.contains { $0.path.hasSuffix("main.rs") })
       workspace.perform("undo")
       XCTAssertEqual(document.text, source)
       try await waitFor("Rust syntax diagnostics to clear after undo") {

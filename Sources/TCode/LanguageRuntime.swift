@@ -37,35 +37,54 @@ enum LanguageRuntime {
 extension WorkspaceWindow {
   var languageRegistry: LanguagePackRegistry { LanguageEnvironment.shared.registry }
   func recognizeLanguage(_ document: CodeDocument) -> LanguageMatch? {
+    let text = document.storage.mutableString
+    let firstLine = text.substring(to: min(1024, text.length))
+      .components(separatedBy: .newlines).first ?? ""
+    let key = [
+      document.url?.path ?? "", document.languageOverride ?? "", firstLine,
+      String(languageRevision),
+    ].joined(separator: "\u{0}")
+    if document.languageKey == key { return document.cachedMatch }
     let candidates = LanguageRecognition.matches(
-      packs: packs, url: document.url,
-      firstLine: String(document.text.prefix(1024)).components(separatedBy: .newlines).first ?? "",
-      override: document.languageOverride)
-    guard candidates.count == 1 else { return nil }
-    return candidates.first
+      packs: packs, url: document.url, firstLine: firstLine, override: document.languageOverride)
+    let match = candidates.count == 1 ? candidates.first : nil
+    document.languageKey = key
+    document.cachedMatch = match
+    return match
   }
   func configureLanguage(_ document: CodeDocument) {
     let match = recognizeLanguage(document)
-    let old = document.languageID
+    let newLanguageID = match?.association.languageID
+    let newPackID = match?.pack.id
+    let newGrammarID = match?.association.grammarID
+    let newQuery = match?.association.highlightQuery
+    let newComment = match?.pack.editor.lineComment
+    guard document.languageID != newLanguageID || document.languagePackID != newPackID
+      || document.grammarID != newGrammarID || document.highlightQuery != newQuery
+      || document.languageComment != newComment
+    else { return }
+    let oldLanguageID = document.languageID
     let oldPack = document.languagePackID
-    document.languageID = match?.association.languageID
-    document.languagePackID = match?.pack.id
-    document.grammarID = match?.association.grammarID
-    document.highlightQuery = match?.association.highlightQuery
-    document.languageComment = match?.pack.editor.lineComment
-    if old != document.languageID, let service = document.languageSession {
+    let oldGrammar = document.grammarID
+    let oldQuery = document.highlightQuery
+    document.languageID = newLanguageID
+    document.languagePackID = newPackID
+    document.grammarID = newGrammarID
+    document.highlightQuery = newQuery
+    document.languageComment = newComment
+    if oldLanguageID != newLanguageID, let service = document.languageSession {
       service.close(document, url: document.url)
       document.languageSession = nil
     }
     for pane in panes where pane.document === document {
-      pane.editor.comment = match?.pack.editor.lineComment ?? ""
-      if oldPack != document.languagePackID {
+      pane.editor.comment = newComment ?? ""
+      if oldPack != newPackID {
         let settings = EditorConfiguration.load(
           root: root, file: document.url, languageDefaults: match?.pack.editor)
         pane.editor.indent =
           settings.useTabs ? "\t" : String(repeating: " ", count: settings.indentSize)
       }
-      pane.highlight()
+      if oldGrammar != newGrammarID || oldQuery != newQuery { pane.highlight() }
     }
   }
   func selectLanguage() {
