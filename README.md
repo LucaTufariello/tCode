@@ -1,10 +1,63 @@
 # tCode
 
-tCode 0.2 is a native AppKit/SwiftUI code editor and initial IDE for **macOS 27 on Apple Silicon**. The editor, window system, PTY terminal, LSP client, DAP client, Git UI, optional AI agent panel, and in-app marketplace run natively. The app has no browser renderer, JavaScript runtime, local server, account, or telemetry.
+tCode is a native macOS IDE for **Apple Silicon**: AppKit and SwiftUI chrome, a real `NSTextView`/TextKit editor, a PTY terminal, LSP and DAP clients, Git, an optional AI agent, and an in-app marketplace. There is no browser renderer, JavaScript runtime, local server, account, or telemetry.
 
-This is an initial implementation with an extensible language foundation. Python, C/C++, and Swift configurations are bundled. Rust is an optional catalog configuration installed without rebuilding the app. Language support is separate from compilers, interpreters, and SDKs. Read the [feature matrix](docs/STATUS.md) for the current boundaries and [contributing guide](CONTRIBUTING.md) for development and release checks.
+![tCode editor with native Swift highlighting and inspector](artifacts/editor.png)
 
-**Catalog publication status:** the four starter configurations work locally. Native grammar artifacts and the remote catalog are prepared for review; their GitHub Release URLs are not yet a released online installation service. New grammar downloads become available after publication and end-to-end verification. See [language support](docs/LANGUAGE-SUPPORT.md).
+## What it is
+
+tCode is built around a simple constraint: the editor should feel like a native macOS instrument, not a web app in a window.
+
+- **Native editing.** `NSTextView` with TextKit 1, shared text storage and undo across split panes, native IME, find/replace, accessibility, and a custom line-number/breakpoint gutter.
+- **Native chrome.** Unified toolbar, source-list sidebar, flat tabs, breadcrumb, status segments, bottom panel, and inspector. Chrome uses system colors and materials so light, dark, and high-contrast appearances behave correctly.
+- **Native tools.** LSP, DAP, formatters, build/test tasks, a real zsh terminal, and Git run as local processes. The app does not ship a JavaScript extension host.
+- **Offline by default.** Editing, search, Git, and language configuration work without an account. External tools and the optional AI agent are explicitly enabled.
+- **A small, declarative extension model.** Language, tool, theme, and snippet packs are data. The marketplace installs reviewed language/tool packs and imports theme/snippet JSON; it does not execute arbitrary plugin code.
+
+## What is in this build
+
+### Editor
+
+- Native tabs with dirty dots, hover close, an accent underline on the active tab, and preserved caret/scroll/folds/cursors across tab switches.
+- Breadcrumb path line, line numbers, current-line tint, bracket matching, syntax highlighting, diagnostics, multiple cursors, folding, comment toggle, duplicate line, and configurable indentation/wrapping.
+- Quick Open (⌘P), Go to Line (⌘L), Find in File (⌘F), workspace regex search (⇧⌘F), reviewed workspace replacement, Command Palette (⇧⌘P), and document symbols.
+- Split panes share text and undo; editor view state is restored per document.
+- Atomic saves with original-byte checks, crash recovery, external-conflict handling, and a real unsaved-changes prompt on close/quit.
+
+### Workspace
+
+- Source-list file tree with active-file selection and an accent marker, native file icons, lazy folders, filters, drag-to-move, rename, duplicate, Trash, reveal, and copy path.
+- Structured **Problems** table with severity icons, filtering, counts, and double-click navigation.
+- Inspector sections for document facts, breakpoints, and workspace context.
+- Status segments for cursor position, indentation, encoding, line endings, language, and tool state. Language and indentation are clickable.
+
+### Language support
+
+- Python, C/C++, Swift, and on-demand Rust configurations.
+- Real `pylsp` + Ruff, `clangd`, SourceKit-LSP, and `rust-analyzer`; debugpy, C++/Swift LLDB, and Rust LLDB DAP.
+- CMake, SwiftPM, Cargo, pytest, CTest, and Swift test discovery with result navigation.
+- Native Tree-sitter grammars in a separately sandboxed XPC worker, with incremental trees and UTF-16 capture conversion.
+- Language packs are versioned JSON data with recognition, editor defaults, LSP/formatter/task/debug configuration, and installer recipe references.
+
+### AI agent
+
+- Optional right-side Agent panel, collapsed by default. It runs only when you send a message.
+- OpenAI-compatible endpoint, model, system prompt, and streaming responses. The API key is stored in the macOS Keychain.
+- Multiple conversations, context from the active file and selection, stop control, and read/list/search tools.
+- File writes and shell commands require an explicit approval alert. Paths are workspace-scoped and symlink-safe; writes use the existing atomic conflict check.
+- No bundled provider account, telemetry, background polling, or remote coding service.
+
+### Marketplace
+
+- **Languages** and **Tools** install through the reviewed catalog, hashes, prerequisites, and activation checks.
+- **Themes** are declarative JSON packs with editor colors. Bundled themes include tCode Dark, tCode Light, Midnight, and Paper; import/apply/remove from the Marketplace.
+- **Snippets** are declarative JSON packs merged into **Editor → Insert Snippet** for their language.
+- No VSIX execution, marketplace account, or arbitrary third-party code host.
+
+### Terminal and Git
+
+- Real zsh PTY sessions with ANSI color, resize, selection/copy/paste, and multiple switchable sessions.
+- Git branch/status, diff, stage/unstage, commit, history, and clean-branch switching. Unmerged files block commits; dirty workspaces block branch switches.
 
 ## Build and launch
 
@@ -15,37 +68,22 @@ Requires an Apple Silicon Mac, macOS 27, and Xcode 27 / Swift 6.4 selected by `x
 open dist/tCode.app
 ```
 
-The script checks the host and SDK, resolves the pinned SwiftTerm dependency, builds arm64 Release, assembles the app with its sandboxed native syntax XPC helper, includes license notices, and signs locally with an ad hoc signature. The result is `dist/tCode.app`. Developer ID signing and notarization have not been performed. Language tools and optional grammar modules are discovered or installed separately.
+The script checks the host and SDK, resolves the pinned SwiftTerm dependency, builds arm64 Release, assembles the app with its sandboxed syntax XPC helper, includes license notices, and signs locally with an ad hoc signature. Developer ID signing and notarization are not performed.
 
 ## First use
 
-tCode opens on its welcome page, with no file and no folder loaded. Recent folders are listed there for reopening. From there:
+1. Choose **File → Open Folder** (⇧⌘O) or **New Project Folder** (⌥⌘N). Opening a folder does not run its tasks or tools.
+2. Create files with **File → New File** (⌘N) or the sidebar context menu. Save with ⌘S.
+3. Use Quick Open (⌘P), Go to Line (⌘L), Find in File (⌘F), and workspace search (⇧⌘F).
+4. Open **Settings → Language Support** for installed packs and the catalog, or **Settings → Marketplace** for language, tool, theme, and snippet packs.
+5. Open the **Agent** panel from the toolbar or **View/Agent → Toggle Agent** (⌥⌘A). Configure an OpenAI-compatible endpoint, model, and API key in **Settings → Agent**.
+6. Use Build (⌘B), Run (⌘R), and Test (⌘U). **Edit Run Configuration** stores the executable, arguments, environment, working directory, interpreter, and debug target in `.tcode/run.json`.
+7. Open a zsh terminal with ⇧⌘` or the panel's + button.
+8. Toggle a breakpoint with ⇧⌘Y or by clicking the gutter, then start debugging from the Run menu.
 
-1. Choose **File → Open Folder** (⇧⌘O) or **New Project Folder** (⌥⌘N). Opening a folder does not run its tasks or tools. The project name titles the sidebar above its file list.
-2. Create nested folders with **File → New Folder** (⌃⌘N) and files with the sidebar context menu or Command Palette (⇧⌘P). New File (⌘N) creates an untitled buffer; Save (⌘S) chooses its location.
-3. Use Quick Open (⌘P), Go to Line (⌘L), Find in File (⌘F), and workspace regex search (⇧⌘F). The palette includes a reviewed workspace replacement command.
-4. Open **Settings → Language Support** to inspect Installed packs and the Catalog, or **Settings → Marketplace** for the discovery surface. Configure existing tools, explicitly Validate them, or review an installation plan. **Editor → Document Language…** selects Automatic, Plain Text, or an installed language for ambiguous files and untitled buffers. Choose **Editor → Enable Language Tools** explicitly to connect a server. Missing support leaves editing available.
-5. Open the **Agent** panel from the toolbar or **View → Toggle Agent** (⌥⌘A). Configure an OpenAI-compatible endpoint, model, and API key in **Settings → Agent**. The agent runs only when you send a message; file writes and commands require approval. The key is stored in the macOS Keychain.
-6. Use Build (⌘B), Run (⌘R), and Test (⌘U) from the Run menu. **Edit Run Configuration** stores executable, arguments, environment, working directory, Python interpreter, and debug program in `.tcode/run.json`. Execution occurs only on your command.
-7. Open a real zsh terminal with ⇧⌘` or the panel's + button. The palette switches or closes terminal sessions.
+## Privacy
 
-Editor tabs show a dirty dot and a close affordance on hover; close one with ⌘W, or right-click it for Close Tab, Close Other Tabs, Close All Tabs, Reveal in Finder, and Copy Path.
-
-Toggle a breakpoint at the caret with ⇧⌘Y or click the gutter. Choose Start Debugging, then use the Run menu for stepping, call stack, variables, and saved watches. Debugging requires a saved file and an available adapter. Build C++, Swift, and Rust targets with debug symbols before launching LLDB.
-
-Settings (⌘,) provides appearance, editor font/size, indentation, autosave, Language Support, Marketplace, Agent provider settings, and menu shortcut overrides. New panes adopt editor preferences. Workspace settings and the supported EditorConfig subset are documented in [setup](docs/SETUP.md).
-
-## Optional language tools
-
-The app edits files offline without external tools. **Language Support → Catalog → Install…** shows optional downloads, hashes, prerequisites, destinations, and expected changes before approval. Choose Configuration Only to install recognition/editing metadata without downloading tools. Existing tools are reused after health checks. tCode manages versioned tool environments and native grammar downloads; Python itself, Rust toolchains, Xcode, and CMake remain external prerequisites.
-
-The original explicit setup script is retained for users of the earlier tools environment:
-
-```sh
-./scripts/setup-tools.sh /opt/homebrew/bin/python3.12
-```
-
-It installs pinned packages under `~/Library/Application Support/tCode/tools` and does not change a project's dependencies. It needs native CPython 3.12 and network access. New managed installs use `ManagedTools` instead and preserve this legacy environment. See [setup](docs/SETUP.md) for Python, C/C++, Swift, and Rust workflows, and [pack authoring](docs/LANGUAGE-SUPPORT.md) for local import/export and workspace overrides.
+Editing works offline. tCode has no account, telemetry, or source upload. Language tools run locally when you enable them in a workspace. The optional AI agent sends only the conversation you submit to the provider you configure; it never polls or runs in the background. Marketplace packs are declarative data and do not execute code.
 
 ## Validation
 
@@ -54,21 +92,23 @@ swift test --arch arm64
 TCODE_INTEGRATION=1 swift test --arch arm64
 ```
 
-The second command exercises real language tools and debugger adapters. Tool setup is required; unavailable tools cause explicit integration skips. Parser and packaged XPC checks, including isolation, are described in [native syntax](docs/SYNTAX.md). For reproducible hardware benchmarks:
+The second command exercises real language tools and debugger adapters. Unavailable tools cause explicit integration skips. See [validation and measured performance](docs/VALIDATION.md), [architecture](docs/ARCHITECTURE.md), and [feature status](docs/STATUS.md).
 
-```sh
-TCODE_INTEGRATION=1 \
-TCODE_SEARCH_METRICS="$PWD/artifacts/language-search-metrics.json" \
-TCODE_EDITOR_METRICS="$PWD/artifacts/language-editor-metrics.json" \
-swift test --arch arm64
-```
+## Screenshots
 
-See [validation and measured performance](docs/VALIDATION.md), [architecture](docs/ARCHITECTURE.md), [feature status](docs/STATUS.md), and [dependency notices](docs/THIRD-PARTY.md). Screenshots in `artifacts/` show the actual native application. The packaged release is `dist/tCode.app`; its verified review archive is `dist/tCode-0.2.0-macOS27-arm64.zip`. Run `python3 scripts/verify-release.py` to prepare and verify that local archive without publishing it.
+![tCode welcome screen](artifacts/welcome.png)
 
-The AI agent is optional and provider-agnostic. It sends a request only when you send a message, uses an OpenAI-compatible endpoint you configure, stores the API key in the macOS Keychain, and asks for approval before writing files or running commands. The language platform and marketplace remain usable without an AI account. The marketplace installs reviewed, hashed language/tool packs and imports declarative theme/snippet JSON packs; it does not execute arbitrary plugin code.
+![tCode agent panel](artifacts/agent.png)
 
-![tCode Rust editor with native syntax highlighting](artifacts/rust-editor.png)
+## Documentation
 
-[Language catalog](artifacts/language-support-catalog.png) · [Rust completion](artifacts/rust-completion.png) · [Rust debugger](artifacts/rust-debugger.png)
+- [Feature/status matrix](docs/STATUS.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Language support](docs/LANGUAGE-SUPPORT.md)
+- [Native syntax](docs/SYNTAX.md)
+- [Setup](docs/SETUP.md)
+- [Validation](docs/VALIDATION.md)
+- [Contributing](CONTRIBUTING.md)
+- [Third-party notices](docs/THIRD-PARTY.md)
 
-Earlier native workflows: [Terminal](artifacts/dark.png) · [Light appearance](artifacts/light.png) · [Python debugger](artifacts/debugger.png) · [C++ debugger](artifacts/cpp-debugger.png) · [Swift debugger](artifacts/swift-debugger.png)
+This is an initial implementation with an extensible language foundation. See the feature matrix for current boundaries. The packaged release is `dist/tCode.app`; signing is ad hoc, and Developer ID/notarization remain a distribution step.

@@ -738,7 +738,14 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     let isActive = active?.url.map { sameFile($0, n.url) } ?? false
     label.font = isActive ? NSFont.systemFont(ofSize: 12, weight: .medium) : Style.body
     label.textColor = .labelColor
-    let stack = NSStackView(views: [image, label])
+    let marker = NSView()
+    marker.wantsLayer = true
+    marker.layer?.backgroundColor =
+      isActive ? NSColor.controlAccentColor.cgColor : NSColor.clear.cgColor
+    marker.setAccessibilityElement(false)
+    marker.widthAnchor.constraint(equalToConstant: 2).isActive = true
+    marker.heightAnchor.constraint(equalToConstant: 14).isActive = true
+    let stack = NSStackView(views: [marker, image, label])
     stack.spacing = 7
     cell.addSubview(stack)
     stack.translatesAutoresizingMaskIntoConstraints = false
