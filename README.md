@@ -100,6 +100,12 @@ The second command exercises real language tools and debugger adapters. Unavaila
 
 ![tCode agent panel](artifacts/agent.png)
 
+![tCode marketplace](artifacts/marketplace.png)
+
+![tCode language support](artifacts/language-support.png)
+
+![tCode in light appearance](artifacts/editor-light.png)
+
 ## Documentation
 
 - [Feature/status matrix](docs/STATUS.md)
