@@ -19,7 +19,13 @@ extension Notification.Name {
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
   var windows: [WorkspaceWindow] = []
   var settings: NSWindowController?
-  var current: WorkspaceWindow? { windows.first { $0.window?.isKeyWindow == true } ?? windows.last }
+  /// The workspace a menu command should act on: the key window first, then the main window
+  /// (which is what stays main while an open panel or sheet is up), then the most recent one.
+  var current: WorkspaceWindow? {
+    windows.first { $0.window?.isKeyWindow == true }
+      ?? windows.first { $0.window?.isMainWindow == true }
+      ?? windows.last { $0.window?.isVisible == true }
+  }
   func applicationDidFinishLaunching(_ notification: Notification) {
     makeMenu()
     let roots = CommandLine.arguments.dropFirst().filter { !$0.hasPrefix("-") }
@@ -61,18 +67,31 @@ extension Notification.Name {
     controller.window?.makeKeyAndOrderFront(nil)
     if let window = controller.window { LaunchMetric.windowReady(window) }
   }
+  /// Opens a folder in the front window, switching that window's workspace. A second window is
+  /// only created when there is no workspace window to reuse.
+  func presentWorkspace(_ url: URL) {
+    if let window = current {
+      window.openWorkspace(url)
+    } else {
+      newWindow(url)
+    }
+  }
   func application(_ application: NSApplication, open urls: [URL]) {
     for url in urls {
       var isDirectory: ObjCBool = false
       if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory),
         isDirectory.boolValue
       {
-        newWindow(url)
+        presentWorkspace(url)
       } else {
         if current == nil { newWindow(nil) }
         current?.open(url)
       }
     }
+  }
+  func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+    if !flag { newWindow(nil) }
+    return true
   }
   func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
     Task {
@@ -135,18 +154,24 @@ extension Notification.Name {
       let p = NSOpenPanel()
       p.canChooseDirectories = true
       p.canChooseFiles = false
-      if p.runModal() == .OK { newWindow(p.url) }
+      if let root = current?.root { p.directoryURL = root }
+      if p.runModal() == .OK, let url = p.url { presentWorkspace(url) }
     case "newProject":
       let p = NSSavePanel()
       p.title = "Create Project Folder"
       p.nameFieldStringValue = "MyProject"
+      if let root = current?.root { p.directoryURL = root }
       if p.runModal() == .OK, let url = p.url {
         do {
           try FileManager.default.createDirectory(at: url, withIntermediateDirectories: false)
-          newWindow(url)
+          presentWorkspace(url)
         } catch { current?.report(error) }
       }
     case "newWindow": newWindow(nil)
+    case "newFile":
+      // New File always lands in the front window; a window is created only when none is open.
+      if current == nil { newWindow(nil) }
+      current?.perform("newFile")
     case "undo", "redo":
       if let text = NSApp.keyWindow?.firstResponder as? NSTextView, !(text is CodeTextView) {
         if item.identifier?.rawValue == "undo" {
@@ -199,10 +224,10 @@ extension Notification.Name {
       return current?.active?.undo.canUndo ?? false
     case "redo":
       return current?.active?.undo.canRedo ?? false
-    case "openFolder", "newWindow", "newProject", "recent":
+    case "openFolder", "newWindow", "newProject", "recent", "newFile":
       return true
     case "sidebar", "panel", "inspector", "agent", "agentNewChat", "quickOpen", "palette", "search",
-      "replaceProject", "newFile", "openFile", "terminal", "terminalSessions", "closeTerminal",
+      "replaceProject", "openFile", "terminal", "terminalSessions", "closeTerminal",
       "gitRefresh", "stage", "unstage", "diff", "commit", "history", "branch", "discoverTests",
       "run", "build", "test", "fullscreen", "minimize", "zoom", "front", "reload",
       "configuration", "reloadLanguagePacks", "workspaceLanguagePacks", "toolVersions", "cancel":

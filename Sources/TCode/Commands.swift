@@ -25,7 +25,7 @@ extension WorkspaceWindow {
     case "recent":
       let paths = UserDefaults.standard.stringArray(forKey: "recentProjects") ?? []
       choose("Recent Projects", items: paths) { i in
-        (NSApp.delegate as? AppDelegate)?.newWindow(URL(fileURLWithPath: paths[i]))
+        (NSApp.delegate as? AppDelegate)?.presentWorkspace(URL(fileURLWithPath: paths[i]))
       }
     case "save": if let doc = active { save(doc) }
     case "undo": active?.undo.undo()

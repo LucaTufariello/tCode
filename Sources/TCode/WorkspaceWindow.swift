@@ -547,7 +547,7 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
   }
   @objc func openRecentProject(_ sender: NSButton) {
     guard let path = sender.representedPath else { return }
-    (NSApp.delegate as? AppDelegate)?.newWindow(URL(fileURLWithPath: path))
+    (NSApp.delegate as? AppDelegate)?.presentWorkspace(URL(fileURLWithPath: path))
   }
   /// Recent projects as a quiet list: the name leads, the path whispers underneath.
   func recentList(_ paths: [String]) -> NSView {
@@ -605,6 +605,117 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
       item.identifier = sender.identifier
       (NSApp.delegate as? AppDelegate)?.menuAction(item)
     }
+  }
+  /// Loads a folder into this window, replacing the workspace it currently shows. Open Folder
+  /// reuses the front window instead of spawning a second one; unsaved buffers are offered the
+  /// same Save / Keep Recovery / Discard prompt as closing a window.
+  func openWorkspace(_ url: URL) {
+    if let root, sameFile(root, url) {
+      window?.makeKeyAndOrderFront(nil)
+      return
+    }
+    let modified = documents.filter(\.modified)
+    guard !modified.isEmpty else {
+      switchWorkspace(to: url)
+      return
+    }
+    switch confirmClose(modified) {
+    case .cancel:
+      return
+    case .discard:
+      for doc in modified {
+        doc.autosaveTask?.cancel()
+        doc.recoveryTask?.cancel()
+        Task { try? await CodeDocument.recovery.remove(doc.id) }
+      }
+      switchWorkspace(to: url)
+    case .keepRecovery:
+      Task {
+        do {
+          for doc in modified {
+            doc.recoveryTask?.cancel()
+            try await CodeDocument.recovery.write(doc.recoveryRecord())
+          }
+        } catch {
+          report(error)
+          return
+        }
+        switchWorkspace(to: url)
+      }
+    case .save:
+      Task {
+        do {
+          for doc in modified { try await saveDocument(doc) }
+        } catch is SaveCancelled {
+          return
+        } catch {
+          report(error)
+          return
+        }
+        switchWorkspace(to: url)
+      }
+    }
+  }
+  /// Tears down the current workspace state and points the same window at `url`.
+  private func switchWorkspace(to url: URL) {
+    // Remember the tabs and split layout of the folder being left before it is torn down.
+    persist()
+    let others = (NSApp.delegate as? AppDelegate)?.windows.filter { $0 !== self } ?? []
+    for doc in documents {
+      doc.listeners.removeValue(forKey: listenerID)
+      fileWatchers.removeValue(forKey: doc.id)?.1.cancel()
+      guard !others.contains(where: { $0.documents.contains { $0 === doc } }) else { continue }
+      doc.autosaveTask?.cancel()
+      doc.recoveryTask?.cancel()
+      doc.languageSession?.close(doc, url: doc.url)
+      doc.languageSession = nil
+      DocumentPool.shared.documents.removeAll { $0 === doc }
+      Task { await SyntaxClient.shared.close(doc.id) }
+    }
+    documents.removeAll()
+    active = nil
+    for pane in panes { pane.detach() }
+    panes.removeAll()
+    for item in editorSplit.splitViewItems { editorSplit.removeSplitViewItem(item) }
+    // Everything that belonged to the old folder stops with it.
+    taskHandle?.cancel()
+    taskHandle = nil
+    taskProcess?.cancel()
+    taskProcess = nil
+    searchHandle?.cancel()
+    searchHandle = nil
+    watchers.forEach { $0.cancel() }
+    watchers.removeAll()
+    watched.removeAll()
+    for service in services.values { service.stop() }
+    services.removeAll()
+    debugSession?.stop()
+    debugSession = nil
+    terminalViews.forEach { $0.terminate() }
+    terminalViews.removeAll()
+    diagnosticList.removeAll()
+    breakpoints.removeAll()
+    history.removeAll()
+    configuration = RunConfiguration()
+    workspaceRegistry = nil
+    languageEnabled = false
+    languageRevision += 1
+    pendingLayout = nil
+    rootNode = nil
+    outline.reloadData()
+    root = url
+    window?.title = url.lastPathComponent
+    window?.subtitle = ""
+    window?.representedURL = nil
+    showWelcome()
+    updateSidebarTitle()
+    agentPanel?.refreshContext()
+    loadWorkspace(url)
+    updateTabs()
+    updateBreadcrumb()
+    updateStatus(immediate: true)
+    refreshProblems()
+    window?.makeKeyAndOrderFront(nil)
   }
   func loadWorkspace(_ url: URL) {
     if UserDefaults.standard.bool(forKey: "workspaceLanguagePacks." + url.path) {
