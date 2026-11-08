@@ -2,7 +2,7 @@
 
 tCode is a native macOS IDE for **Apple Silicon**: AppKit and SwiftUI chrome, a real `NSTextView`/TextKit editor, a PTY terminal, LSP and DAP clients, Git, an optional AI agent, and an in-app marketplace. There is no browser renderer, JavaScript runtime, local server, account, or telemetry.
 
-![tCode editor with native Swift highlighting and inspector](artifacts/editor.png)
+![tCode editor with native Swift highlighting and inspector](artifacts/editor-dark.png)
 
 ## What it is
 
@@ -96,9 +96,9 @@ The second command exercises real language tools and debugger adapters. Unavaila
 
 ## Screenshots
 
-![tCode welcome screen](artifacts/welcome.png)
+![tCode welcome screen](artifacts/welcome-screen.png)
 
-![tCode agent panel](artifacts/agent.png)
+![tCode agent panel](artifacts/agent-panel.png)
 
 ![tCode marketplace](artifacts/marketplace.png)
 
