@@ -56,8 +56,11 @@ import AppKit
     table.addTableColumn(column)
     table.headerView = nil
     table.backgroundColor = .clear
-    table.style = .sourceList
-    table.rowSizeStyle = .medium
+    table.style = .fullWidth
+    table.selectionHighlightStyle = .none
+    table.rowSizeStyle = .custom
+    table.rowHeight = Style.rowHeight
+    table.intercellSpacing = .zero
     table.dataSource = self
     table.delegate = self
     table.target = self
@@ -71,10 +74,24 @@ import AppKit
   func numberOfRows(in tableView: NSTableView) -> Int { rows.count }
   func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView?
   {
+    let cell = NSTableCellView()
     let label = NSTextField(labelWithString: rows[row])
     label.font = Style.body
+    label.textColor = .secondaryLabelColor
     label.lineBreakMode = .byTruncatingMiddle
-    return label
+    label.translatesAutoresizingMaskIntoConstraints = false
+    cell.addSubview(label)
+    NSLayoutConstraint.activate([
+      label.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: 12),
+      label.trailingAnchor.constraint(equalTo: cell.trailingAnchor, constant: -8),
+      label.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
+    ])
+    cell.textField = label
+    return cell
+  }
+
+  func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
+    IndustrialRowView()
   }
   @objc func chosen() { if table.selectedRow >= 0 { selection(table.selectedRow) } }
 }

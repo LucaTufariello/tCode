@@ -483,39 +483,40 @@ struct LanguageSupportView: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
-      HStack {
-        Picker("Language support", selection: $section) {
-          Text("Installed").tag("installed")
-          Text("Catalog").tag("catalog")
-        }.pickerStyle(.segmented).frame(width: 220)
+      HStack(spacing: 8) {
+        SquareSegmented(
+          options: [("Installed", "installed"), ("Catalog", "catalog")], selection: $section,
+          segmentWidth: 74)
         Spacer()
-        Button("Import…", action: importPack)
-        Button("Refresh", action: environment.refreshCatalog)
+        IndustrialSwiftButton(title: "Import…", action: importPack)
+        IndustrialSwiftButton(title: "Refresh") { environment.refreshCatalog() }
           .help("Download the curated catalog. This does not install or start tools.")
       }.disabled(environment.operation != nil)
       HStack(alignment: .top, spacing: 0) {
-        List(selection: $selection) {
-          if section == "installed" {
-            ForEach(environment.packs, id: \.id) { pack in
-              VStack(alignment: .leading, spacing: 3) {
-                Text(pack.name)
-                Text(pack.enabled ? "Enabled" : "Disabled").font(.caption).foregroundStyle(
-                  .secondary)
-              }.tag(pack.id)
-            }
-          } else {
-            ForEach(environment.catalog, id: \.id) { entry in
-              VStack(alignment: .leading, spacing: 3) {
-                Text(entry.name)
-                Text(environment.packs.contains { $0.id == entry.id } ? "Installed" : "Available")
-                  .font(.caption).foregroundStyle(.secondary)
-              }.tag(entry.id)
+        ScrollView {
+          LazyVStack(spacing: 0) {
+            if section == "installed" {
+              ForEach(environment.packs, id: \.id) { pack in
+                IndustrialListRow(
+                  title: pack.name, detail: pack.enabled ? "Enabled" : "Disabled",
+                  selected: selectedID == pack.id
+                ) { selection = pack.id }
+              }
+            } else {
+              ForEach(environment.catalog, id: \.id) { entry in
+                IndustrialListRow(
+                  title: entry.name,
+                  detail: environment.packs.contains { $0.id == entry.id }
+                    ? "Installed" : "Available",
+                  selected: selectedID == entry.id
+                ) { selection = entry.id }
+              }
             }
           }
         }
-        .listStyle(.sidebar).frame(width: 165)
+        .frame(width: 200)
         .accessibilityLabel(section == "installed" ? "Installed languages" : "Language catalog")
-        Divider()
+        Rectangle().fill(Color(nsColor: Style.hairline)).frame(width: 1)
         ScrollView {
           VStack(alignment: .leading, spacing: 14) {
             if section == "catalog", let entry = selectedEntry {
@@ -523,9 +524,17 @@ struct LanguageSupportView: View {
             } else if let pack = selectedPack {
               installedDetail(pack)
             } else {
-              ContentUnavailableView(
-                "No Language Selected", systemImage: "curlybraces",
-                description: Text("Choose a language or import a configuration."))
+              VStack(alignment: .leading, spacing: 6) {
+                Image(systemName: "curlybraces")
+                  .font(.system(size: 18, weight: .light))
+                  .foregroundStyle(.tertiary)
+                Text("No Language Selected")
+                  .font(.system(size: 13, weight: .medium))
+                Text("Choose a language or import a configuration.")
+                  .font(.system(size: 11))
+                  .foregroundStyle(.secondary)
+              }
+              .padding(.top, 8)
             }
           }.padding(.leading, 14).padding(.trailing, 8).frame(
             maxWidth: .infinity, alignment: .leading)
@@ -533,23 +542,40 @@ struct LanguageSupportView: View {
       }
       .frame(maxHeight: .infinity).disabled(environment.operation != nil)
       if let operation = environment.operation {
-        HStack {
-          ProgressView(value: environment.operationFraction).frame(width: 90)
-          Text(operation).font(.caption).lineLimit(2)
+        HStack(spacing: 10) {
+          IndustrialProgressBar(fraction: environment.operationFraction)
+          Text(operation).font(.system(size: 10.5)).foregroundStyle(.secondary).lineLimit(2)
           Spacer()
-          Button("Cancel", action: environment.cancel)
+          IndustrialSwiftButton(title: "Cancel", action: environment.cancel)
         }
       }
       if let message = environment.message {
-        HStack(alignment: .top) {
-          Text(message).font(.caption).textSelection(.enabled)
-          Spacer()
-          Button(action: environment.dismissMessage) { Image(systemName: "xmark.circle") }
-            .buttonStyle(.plain).accessibilityLabel("Dismiss message")
-        }.padding(8).background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
+        HStack(alignment: .top, spacing: 10) {
+          Text(message)
+            .font(.system(size: 10.5))
+            .foregroundStyle(.secondary)
+            .textSelection(.enabled)
+            .frame(maxWidth: .infinity, alignment: .leading)
+          Button(action: environment.dismissMessage) {
+            Image(systemName: "xmark")
+              .font(.system(size: 9, weight: .semibold))
+              .foregroundStyle(.tertiary)
+              .frame(width: 18, height: 18)
+              .contentShape(Rectangle())
+          }
+          .buttonStyle(.plain)
+          .accessibilityLabel("Dismiss message")
+        }
+        .padding(10)
+        .background(Color(nsColor: Style.control))
+        .overlay {
+          RoundedRectangle(cornerRadius: Style.radius)
+            .stroke(Color(nsColor: Style.hairline), lineWidth: 1)
+        }
       }
       if !environment.issues.isEmpty {
-        Text(environment.issues.joined(separator: "\n")).font(.caption).foregroundStyle(.orange)
+        Text(environment.issues.joined(separator: "\n"))
+          .font(.system(size: 10.5)).foregroundStyle(.orange)
           .lineLimit(3).help(environment.issues.joined(separator: "\n"))
       }
       Text(
@@ -557,8 +583,9 @@ struct LanguageSupportView: View {
           ? environment.catalogStatus
           : "Opening folders and importing configurations never installs or starts tools."
       )
-      .font(.caption).foregroundStyle(.secondary)
+      .font(.system(size: 10.5)).foregroundStyle(.secondary)
     }
+    .tint(Color(nsColor: Style.accent))
     .padding(10)
     .onChange(of: visibleIDs) { _, ids in
       if selection.map({ !ids.contains($0) }) ?? true { selection = ids.first }
@@ -571,6 +598,12 @@ struct LanguageSupportView: View {
       selection = visibleIDs.first
       await environment.loadCachedCatalog()
       await environment.refreshGrammarStatus()
+      // Temporary visual-check hook: open the configuration sheet.
+      if ProcessInfo.processInfo.environment["TCODE_LANGUAGE_SHEET"] == "configure",
+        let pack = environment.packs.first
+      {
+        configuration = pack
+      }
     }
     .sheet(item: $configuration) { pack in
       LanguageConfigurationView(pack: pack, environment: environment)
@@ -596,17 +629,18 @@ struct LanguageSupportView: View {
   }
 
   @ViewBuilder private func installedDetail(_ pack: LanguagePack) -> some View {
-    HStack(alignment: .firstTextBaseline) {
-      Text(pack.name).font(.title2).fontWeight(.semibold)
+    HStack {
+      Text(pack.name).font(.system(size: 15, weight: .semibold))
       Spacer()
-      Toggle(
-        "Enabled",
-        isOn: Binding(get: { pack.enabled }, set: { environment.setEnabled(pack, enabled: $0) })
-      )
-      .toggleStyle(.switch).controlSize(.small)
+      HStack(spacing: 8) {
+        Text("Enabled").font(.system(size: 11)).foregroundStyle(.secondary)
+        SquareCheckbox(
+          isOn: Binding(
+            get: { pack.enabled }, set: { environment.setEnabled(pack, enabled: $0) }))
+      }
     }
     Text("Pack \(pack.id) · version \(pack.version) · interface \(pack.interfaceVersion)")
-      .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+      .font(.system(size: 10.5)).foregroundStyle(.secondary).textSelection(.enabled)
     VStack(alignment: .leading, spacing: 8) {
       feature(
         "Recognition",
@@ -622,11 +656,11 @@ struct LanguageSupportView: View {
         symbol: "play.circle")
       feature("Debugging", state: toolState(pack.adapter), symbol: "ladybug")
     }
-    HStack {
-      Button("Configure…") { configuration = pack }
-      Button("Validate") { environment.validate(pack) }
+    HStack(spacing: 8) {
+      IndustrialSwiftButton(title: "Configure…") { configuration = pack }
+      IndustrialSwiftButton(title: "Validate") { environment.validate(pack) }
         .help("Explicitly run version probes for this pack’s configured tools.")
-      Menu("More") {
+      IndustrialMenuButton(title: "More") {
         Button("Update…") { environment.prepareInstallation(id: pack.id, update: true) }
           .disabled(!environment.catalog.contains { $0.id == pack.id })
         Button("Export…") { exportPack(pack) }
@@ -635,44 +669,53 @@ struct LanguageSupportView: View {
         Button("Remove Configuration…", role: .destructive) { confirmingRemoval = pack }
           .disabled(!environment.registry.isUserInstalled(id: pack.id))
       }
-    }.controlSize(.small)
+    }
     if let lines = environment.validation[pack.id] {
-      GroupBox("Validation results") {
-        VStack(alignment: .leading, spacing: 6) {
-          ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
-            Text(line).font(.caption).textSelection(.enabled)
-          }
-        }.frame(maxWidth: .infinity, alignment: .leading).padding(4)
+      VStack(alignment: .leading, spacing: 6) {
+        SettingsHeading("Validation results")
+        IndustrialNote(text: lines.joined(separator: "\n"))
       }
     }
     Text(
       "Tool locations are discovered locally. Select Validate to check that each executable runs; availability here does not mean a server is connected."
     )
-    .font(.caption).foregroundStyle(.secondary)
+    .font(.system(size: 10.5)).foregroundStyle(.secondary)
   }
 
   @ViewBuilder private func catalogDetail(_ entry: LanguageCatalogEntry) -> some View {
-    Text(entry.name).font(.title2).fontWeight(.semibold)
-    Text(entry.summary).foregroundStyle(.secondary)
-    Text("Version \(entry.version)").font(.caption)
+    Text(entry.name).font(.system(size: 15, weight: .semibold))
+    Text(entry.summary)
+      .font(.system(size: 11.5))
+      .foregroundStyle(.secondary)
+      .fixedSize(horizontal: false, vertical: true)
+    Text("Version \(entry.version)")
+      .font(.system(size: 10.5, design: .monospaced))
+      .foregroundStyle(.tertiary)
     if entry.availability == .draft {
       Label("Bundled starter configuration", systemImage: "shippingbox")
-        .font(.caption)
+        .font(.system(size: 10.5))
+        .foregroundStyle(.secondary)
       Text(
         "Published catalog artifacts are not available yet. The bundled configuration can be installed; supported tools use their separately verified sources."
       )
-      .font(.caption).foregroundStyle(.secondary)
+      .font(.system(size: 10.5)).foregroundStyle(.secondary)
+      .fixedSize(horizontal: false, vertical: true)
     }
     Text(
       "Installation is optional. tCode checks prerequisites and shows downloads and expected changes before requesting approval."
     )
-    .font(.caption).foregroundStyle(.secondary)
+    .font(.system(size: 10.5)).foregroundStyle(.secondary)
+    .fixedSize(horizontal: false, vertical: true)
     if !entry.toolRecipeIDs.isEmpty {
       Text("Tool recipes: \(entry.toolRecipeIDs.joined(separator: ", "))")
-        .font(.caption).textSelection(.enabled)
+        .font(.system(size: 10.5, design: .monospaced))
+        .foregroundStyle(.tertiary)
+        .textSelection(.enabled)
     }
-    Button(
-      environment.packs.contains { $0.id == entry.id } ? "Update / Install Tools…" : "Install…"
+    IndustrialSwiftButton(
+      title: environment.packs.contains { $0.id == entry.id }
+        ? "Update / Install Tools…" : "Install…",
+      kind: .primary
     ) {
       environment.prepareInstallation(
         id: entry.id, update: environment.packs.contains { $0.id == entry.id })
@@ -681,10 +724,16 @@ struct LanguageSupportView: View {
 
   private func feature(_ title: String, state: String, symbol: String) -> some View {
     HStack(alignment: .top, spacing: 8) {
-      Image(systemName: symbol).frame(width: 18).foregroundStyle(.secondary)
+      Image(systemName: symbol)
+        .font(.system(size: 12))
+        .frame(width: 18)
+        .foregroundStyle(.secondary)
       VStack(alignment: .leading, spacing: 2) {
-        Text(title).fontWeight(.medium)
-        Text(state).font(.caption).foregroundStyle(.secondary)
+        Text(title)
+          .font(.system(size: 12, weight: .medium))
+        Text(state)
+          .font(.system(size: 10.5))
+          .foregroundStyle(.secondary)
       }
     }
   }
@@ -736,6 +785,61 @@ struct LanguageSupportView: View {
   }
 }
 
+// MARK: - Sheet chrome
+
+/// A sheet header: one primary line and an optional technical subtitle.
+private struct SheetHeader: View {
+  let title: String
+  var subtitle: String?
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 4) {
+      Text(title)
+        .font(.system(size: 15, weight: .semibold))
+      if let subtitle {
+        Text(subtitle)
+          .font(.system(size: 10.5))
+          .foregroundStyle(.secondary)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+    }
+  }
+}
+
+/// A ruled block inside a sheet. Flat, squared, and quiet; no system group box.
+private struct SheetBlock<Content: View>: View {
+  @ViewBuilder let content: Content
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) { content }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(12)
+      .background(Color(nsColor: Style.control))
+      .overlay {
+        RoundedRectangle(cornerRadius: Style.radius)
+          .stroke(Color(nsColor: Style.hairline), lineWidth: 1)
+      }
+  }
+}
+
+/// A technical readout line inside a sheet: monospaced, quiet, selectable.
+private struct SheetReadout: View {
+  let text: String
+  var color: Color = Color(nsColor: .tertiaryLabelColor)
+
+  var body: some View {
+    Text(text)
+      .font(.system(size: 9.5, design: .monospaced))
+      .foregroundStyle(color)
+      .textSelection(.enabled)
+      .lineLimit(2)
+      .truncationMode(.middle)
+      .frame(maxWidth: .infinity, alignment: .leading)
+  }
+}
+
+// MARK: - Installation
+
 struct LanguageInstallationView: View {
   let request: LanguageInstallationRequest
   @ObservedObject var environment: LanguageEnvironment
@@ -747,119 +851,163 @@ struct LanguageInstallationView: View {
   }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
-      Text("Install \(request.entry.name) Support").font(.title2)
+    VStack(alignment: .leading, spacing: 0) {
+      SheetHeader(
+        title: "Install \(request.entry.name) Support",
+        subtitle:
+          "Configuration \(request.entry.version). Select optional components; missing external prerequisites do not prevent configuration installation."
+      )
       ScrollView {
-        VStack(alignment: .leading, spacing: 12) {
-          Text("Configuration: \(request.entry.name) \(request.entry.version)")
-          Text(
-            "Select optional components. Missing external prerequisites do not prevent configuration installation."
-          )
-          .font(.caption).foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 10) {
           ForEach(Array(request.planIssues.enumerated()), id: \.offset) { _, issue in
-            Label(issue, systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(
-              .orange)
+            Label(issue, systemImage: "exclamationmark.triangle")
+              .font(.system(size: 10.5))
+              .foregroundStyle(.orange)
           }
           ForEach(request.plans) { plan in
-            GroupBox {
-              VStack(alignment: .leading, spacing: 7) {
-                Toggle(
-                  "\(plan.name) · \(plan.version)",
-                  isOn: Binding(
-                    get: { selectedRecipes.contains(plan.id) },
-                    set: {
-                      if $0 {
-                        selectedRecipes.insert(plan.id)
-                      } else {
-                        selectedRecipes.remove(plan.id)
-                      }
-                    })
-                )
-                .disabled(!plan.canInstall)
-                ForEach(Array(plan.prerequisites.enumerated()), id: \.offset) { _, prerequisite in
-                  Label(
-                    "\(prerequisite.name): \(prerequisite.detail)",
-                    systemImage: prerequisite.satisfied
-                      ? "checkmark.circle" : "exclamationmark.triangle"
-                  )
-                  .font(.caption)
-                }
-                ForEach(Array(plan.downloads.enumerated()), id: \.offset) { _, download in
-                  VStack(alignment: .leading, spacing: 2) {
-                    Text(
-                      "\(download.filename) · \(ByteCountFormatter.string(fromByteCount: Int64(download.size), countStyle: .file))"
-                    )
-                    Text(download.url.absoluteString).textSelection(.enabled)
-                    Text("SHA-256: " + download.sha256).textSelection(.enabled)
-                  }.font(.caption).foregroundStyle(.secondary)
-                }
-                ForEach(Array(plan.expectedChanges.enumerated()), id: \.offset) { _, change in
-                  Text(change).font(.caption)
-                }
-                if let reason = plan.unavailableReason {
-                  Text(reason).font(.caption).foregroundStyle(.orange)
-                }
-              }.frame(maxWidth: .infinity, alignment: .leading).padding(4)
-            }
+            planBlock(plan)
           }
-          if let plan = request.grammarPlan, !plan.items.isEmpty {
-            GroupBox {
-              VStack(alignment: .leading, spacing: 8) {
-                Toggle(
-                  "Native syntax grammars · \(ByteCountFormatter.string(fromByteCount: Int64(plan.downloadBytes), countStyle: .file))",
-                  isOn: $includeGrammars
-                )
-                .disabled(!grammarDownloadsAvailable)
-                if !grammarDownloadsAvailable {
-                  Text(
-                    "Grammar release artifacts are prepared but have not been published. Existing grammars keep working; new downloads become available after a published catalog update."
-                  )
-                  .font(.caption).foregroundStyle(.orange)
-                }
-                ForEach(Array(plan.items.enumerated()), id: \.offset) { _, item in
-                  Text("\(item.descriptor.id) · \(item.descriptor.version)").font(.caption)
-                  Text(item.url.absoluteString).font(.caption).textSelection(.enabled)
-                  Text("SHA-256: " + item.sha256).font(.caption).textSelection(.enabled)
-                }
-                ForEach(Array(plan.destinations.enumerated()), id: \.offset) { _, destination in
-                  Text("Destination: " + destination.path).font(.caption).foregroundStyle(
-                    .secondary
-                  ).textSelection(.enabled)
-                }
-              }.frame(maxWidth: .infinity, alignment: .leading).padding(4)
-            }
-          } else if let issue = request.grammarIssue {
-            Label(issue, systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(
-              .orange)
-          } else {
-            Text("Requested native grammars are already installed.").font(.caption).foregroundStyle(
-              .secondary)
-          }
+          grammarBlock
+        }
+        .padding(.top, 14).padding(.bottom, 18)
+      }
+      footer
+    }
+    .padding(22)
+    .frame(width: 580, height: 540)
+    .background(Color(nsColor: Style.chrome))
+    .onAppear {
+      selectedRecipes = Set(request.plans.filter(\.canInstall).map(\.id))
+      includeGrammars = grammarDownloadsAvailable
+    }
+  }
+
+  private func planBlock(_ plan: ToolInstallPlan) -> some View {
+    SheetBlock {
+      HStack(spacing: 8) {
+        SquareCheckbox(
+          isOn: Binding(
+            get: { selectedRecipes.contains(plan.id) },
+            set: {
+              if $0 { selectedRecipes.insert(plan.id) } else { selectedRecipes.remove(plan.id) }
+            }),
+          label: plan.name)
+        Text(plan.name)
+          .font(.system(size: 12, weight: .medium))
+        Text(plan.version)
+          .font(.system(size: 10, design: .monospaced))
+          .foregroundStyle(.tertiary)
+        Spacer(minLength: 0)
+      }
+      .disabled(!plan.canInstall)
+      ForEach(Array(plan.prerequisites.enumerated()), id: \.offset) { _, prerequisite in
+        Label(
+          "\(prerequisite.name): \(prerequisite.detail)",
+          systemImage: prerequisite.satisfied ? "checkmark.circle" : "exclamationmark.triangle"
+        )
+        .font(.system(size: 10.5))
+        .foregroundStyle(
+          prerequisite.satisfied ? Color.secondary : Color(nsColor: .systemOrange))
+      }
+      ForEach(Array(plan.downloads.enumerated()), id: \.offset) { _, download in
+        VStack(alignment: .leading, spacing: 2) {
           Text(
-            "Approval allows only the selected components to be installed or reused. Compilers and SDKs remain externally managed. Workspace servers are started separately with Enable Language Tools."
+            "\(download.filename) · \(ByteCountFormatter.string(fromByteCount: Int64(download.size), countStyle: .file))"
           )
-          .font(.caption).foregroundStyle(.secondary)
+          .font(.system(size: 10.5, design: .monospaced))
+          SheetReadout(text: download.url.absoluteString)
+          SheetReadout(text: "SHA-256: " + download.sha256)
         }
       }
-      HStack {
-        Button("Configuration Only") { environment.install(request) }
-          .help(
-            "Install recognition and editing configuration without downloading tools or grammars.")
-        Spacer()
-        Button("Cancel") { environment.installation = nil }.keyboardShortcut(.cancelAction)
-        Button("Approve Installation") {
+      ForEach(Array(plan.expectedChanges.enumerated()), id: \.offset) { _, change in
+        Text(change)
+          .font(.system(size: 10.5))
+          .foregroundStyle(.secondary)
+      }
+      if let reason = plan.unavailableReason {
+        Text(reason)
+          .font(.system(size: 10.5))
+          .foregroundStyle(.orange)
+      }
+    }
+    .opacity(plan.canInstall ? 1 : 0.6)
+  }
+
+  @ViewBuilder private var grammarBlock: some View {
+    if let plan = request.grammarPlan, !plan.items.isEmpty {
+      SheetBlock {
+        HStack(spacing: 8) {
+          SquareCheckbox(
+            isOn: $includeGrammars,
+            label: "Native syntax grammars · \(ByteCountFormatter.string(fromByteCount: Int64(plan.downloadBytes), countStyle: .file))")
+          Text(
+            "Native syntax grammars · \(ByteCountFormatter.string(fromByteCount: Int64(plan.downloadBytes), countStyle: .file))"
+          )
+          .font(.system(size: 12, weight: .medium))
+          Spacer(minLength: 0)
+        }
+        .disabled(!grammarDownloadsAvailable)
+        if !grammarDownloadsAvailable {
+          Text(
+            "Grammar release artifacts are prepared but have not been published. Existing grammars keep working; new downloads become available after a published catalog update."
+          )
+          .font(.system(size: 10.5))
+          .foregroundStyle(.orange)
+          .fixedSize(horizontal: false, vertical: true)
+        }
+        ForEach(Array(plan.items.enumerated()), id: \.offset) { _, item in
+          Text("\(item.descriptor.id) · \(item.descriptor.version)")
+            .font(.system(size: 10.5, design: .monospaced))
+          SheetReadout(text: item.url.absoluteString)
+          SheetReadout(text: "SHA-256: " + item.sha256)
+        }
+        ForEach(Array(plan.destinations.enumerated()), id: \.offset) { _, destination in
+          SheetReadout(text: "Destination: " + destination.path)
+        }
+      }
+    } else if let issue = request.grammarIssue {
+      Label(issue, systemImage: "exclamationmark.triangle")
+        .font(.system(size: 10.5))
+        .foregroundStyle(.orange)
+    } else {
+      Text("Requested native grammars are already installed.")
+        .font(.system(size: 10.5))
+        .foregroundStyle(.secondary)
+    }
+  }
+
+  private var footer: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      // Kept out of the scrolling list so the note is never cut off by the button row.
+      Text(
+        "Approval allows only the selected components to be installed or reused. Compilers and SDKs remain externally managed. Workspace servers are started separately with Enable Language Tools."
+      )
+      .font(.system(size: 10.5))
+      .foregroundStyle(.secondary)
+      .fixedSize(horizontal: false, vertical: true)
+      HStack(spacing: 8) {
+        IndustrialSwiftButton(title: "Configuration Only") {
+          environment.install(request)
+        }
+        .help(
+          "Install recognition and editing configuration without downloading tools or grammars.")
+        Spacer(minLength: 0)
+        IndustrialSwiftButton(title: "Cancel") { environment.installation = nil }
+          .keyboardShortcut(.cancelAction)
+        IndustrialSwiftButton(title: "Approve Installation", kind: .primary) {
           environment.install(
             request, recipeIDs: selectedRecipes,
             includeGrammars: includeGrammars && request.grammarPlan != nil)
-        }.keyboardShortcut(.defaultAction)
+        }
+        .keyboardShortcut(.defaultAction)
       }
-    }.padding(22).frame(width: 560, height: 480)
-      .onAppear {
-        selectedRecipes = Set(request.plans.filter(\.canInstall).map(\.id))
-        includeGrammars = grammarDownloadsAvailable
-      }
+    }
+    .padding(.top, 12)
+    .overlay(alignment: .top) { SettingsRule() }
   }
 }
+
+// MARK: - Removal
 
 private struct LanguageDownloadRemovalView: View {
   let request: LanguageRemovalRequest
@@ -868,68 +1016,97 @@ private struct LanguageDownloadRemovalView: View {
   @State private var grammarIDs = Set<String>()
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
-      Text("Remove Managed Downloads").font(.title2)
-      Text(
-        "Select tCode-owned resources to remove for \(request.pack.name). Other projects may use these shared downloads."
+    VStack(alignment: .leading, spacing: 0) {
+      SheetHeader(
+        title: "Remove Managed Downloads",
+        subtitle:
+          "Select tCode-owned resources to remove for \(request.pack.name). Other projects may use these shared downloads."
       )
       ScrollView {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
           ForEach(Array(request.receipts.enumerated()), id: \.offset) { _, receipt in
-            VStack(alignment: .leading, spacing: 4) {
-              Toggle(
-                "\(receipt.recipeID) · \(receipt.version)",
-                isOn: Binding(
-                  get: { recipeIDs.contains(receipt.recipeID) },
-                  set: {
-                    if $0 {
-                      recipeIDs.insert(receipt.recipeID)
-                    } else {
-                      recipeIDs.remove(receipt.recipeID)
-                    }
-                  }))
-              Text(receipt.managedDirectory ?? "").font(.caption).foregroundStyle(.secondary)
-                .textSelection(.enabled)
+            SheetBlock {
+              HStack(spacing: 8) {
+                SquareCheckbox(
+                  isOn: Binding(
+                    get: { recipeIDs.contains(receipt.recipeID) },
+                    set: {
+                      if $0 {
+                        recipeIDs.insert(receipt.recipeID)
+                      } else {
+                        recipeIDs.remove(receipt.recipeID)
+                      }
+                    }),
+                  label: receipt.recipeID)
+                Text("\(receipt.recipeID) · \(receipt.version)")
+                  .font(.system(size: 12, weight: .medium))
+                Spacer(minLength: 0)
+              }
+              if let directory = receipt.managedDirectory {
+                SheetReadout(text: directory)
+              }
             }
           }
           ForEach(request.grammarIDs, id: \.self) { id in
-            VStack(alignment: .leading, spacing: 4) {
-              Toggle(
-                id + " syntax grammar",
-                isOn: Binding(
-                  get: { grammarIDs.contains(id) },
-                  set: { if $0 { grammarIDs.insert(id) } else { grammarIDs.remove(id) } }))
-              Text(environment.grammarInstaller.root.appendingPathComponent(id).path)
-                .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+            SheetBlock {
+              HStack(spacing: 8) {
+                SquareCheckbox(
+                  isOn: Binding(
+                    get: { grammarIDs.contains(id) },
+                    set: { if $0 { grammarIDs.insert(id) } else { grammarIDs.remove(id) } }),
+                  label: id)
+                Text(id + " syntax grammar")
+                  .font(.system(size: 12, weight: .medium))
+                Spacer(minLength: 0)
+              }
+              SheetReadout(
+                text: environment.grammarInstaller.root.appendingPathComponent(id).path)
             }
           }
           ForEach(request.sharedImpact, id: \.self) { impact in
-            Label(impact, systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(
-              .orange)
+            Label(impact, systemImage: "exclamationmark.triangle")
+              .font(.system(size: 10.5))
+              .foregroundStyle(.orange)
           }
           if !request.externalRecipeIDs.isEmpty {
             Text(
               "Retained external installations: "
                 + request.externalRecipeIDs.joined(separator: ", ")
             )
-            .font(.caption).foregroundStyle(.secondary)
+            .font(.system(size: 10.5))
+            .foregroundStyle(.secondary)
           }
-          Text(
-            "All versions of the selected managed resources are removed. Language configurations and project files remain. Reused external tools, compilers, interpreters, and SDKs are retained."
-          )
-          .font(.caption).foregroundStyle(.secondary)
-        }.frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.top, 14).padding(.bottom, 18)
       }
-      HStack {
-        Spacer()
-        Button("Cancel") { environment.removal = nil }.keyboardShortcut(.cancelAction)
-        Button("Remove Selected Downloads", role: .destructive) {
-          environment.removeDownloads(request, recipeIDs: recipeIDs, grammarIDs: grammarIDs)
-        }.disabled(recipeIDs.isEmpty && grammarIDs.isEmpty)
+      VStack(alignment: .leading, spacing: 10) {
+        // Kept out of the scrolling list so the note is never cut off by the button row.
+        Text(
+          "All versions of the selected managed resources are removed. Language configurations and project files remain. Reused external tools, compilers, interpreters, and SDKs are retained."
+        )
+        .font(.system(size: 10.5))
+        .foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
+        HStack(spacing: 8) {
+          Spacer(minLength: 0)
+          IndustrialSwiftButton(title: "Cancel") { environment.removal = nil }
+            .keyboardShortcut(.cancelAction)
+          IndustrialSwiftButton(title: "Remove Selected Downloads", kind: .primary) {
+            environment.removeDownloads(request, recipeIDs: recipeIDs, grammarIDs: grammarIDs)
+          }
+          .disabled(recipeIDs.isEmpty && grammarIDs.isEmpty)
+        }
       }
-    }.padding(22).frame(width: 550, height: 440)
+      .padding(.top, 12)
+      .overlay(alignment: .top) { SettingsRule() }
+    }
+    .padding(22)
+    .frame(width: 570, height: 480)
+    .background(Color(nsColor: Style.chrome))
   }
 }
+
+// MARK: - Configuration
 
 private struct LanguageConfigurationView: View {
   let pack: LanguagePack
@@ -943,62 +1120,82 @@ private struct LanguageConfigurationView: View {
   }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
-      Text("Configure \(pack.name)").font(.title2)
-      Text(
-        "Executable overrides apply to tCode on this Mac. They are excluded from exported packs."
+    VStack(alignment: .leading, spacing: 0) {
+      SheetHeader(
+        title: "Configure \(pack.name)",
+        subtitle:
+          "Executable overrides apply to tCode on this Mac. They are excluded from exported packs."
       )
-      .foregroundStyle(.secondary)
       ScrollView {
         VStack(alignment: .leading, spacing: 12) {
           ForEach(LanguageEnvironment.toolNames(pack), id: \.self) { tool in
-            VStack(alignment: .leading, spacing: 4) {
-              HStack {
-                TextField(
-                  tool + " executable override",
-                  text: Binding(get: { paths[tool] ?? "" }, set: { paths[tool] = $0 })
-                ).textFieldStyle(.roundedBorder)
-                Button("Choose…") { chooseExecutable(tool) }.controlSize(.small)
+            VStack(alignment: .leading, spacing: 5) {
+              HStack(spacing: 8) {
+                Text(tool)
+                  .font(.system(size: 11, design: .monospaced))
+                  .frame(width: 110, alignment: .leading)
+                IndustrialTextField(
+                  text: Binding(get: { paths[tool] ?? "" }, set: { paths[tool] = $0 }),
+                  width: 260, placeholder: "Executable override")
+                IndustrialSwiftButton(title: "Choose…") { chooseExecutable(tool) }
               }
-              Text("Located: \(ToolLocator.find(tool) ?? "not found")")
-                .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+              SheetReadout(text: "Located: \(ToolLocator.find(tool) ?? "not found")")
+                .padding(.leading, 118)
             }
           }
           ForEach(externalGuidance, id: \.self) { guidance in
-            Text(guidance).font(.caption).foregroundStyle(.secondary)
+            Text(guidance)
+              .font(.system(size: 10.5))
+              .foregroundStyle(.secondary)
+              .fixedSize(horizontal: false, vertical: true)
           }
           if LanguageEnvironment.toolNames(pack).isEmpty {
-            Text("This language pack has no external tool commands.").foregroundStyle(.secondary)
+            Text("This language pack has no external tool commands.")
+              .font(.system(size: 11.5))
+              .foregroundStyle(.secondary)
           }
         }
+        .padding(.top, 14).padding(.bottom, 18)
       }
-      Text(
-        "Leave an override empty to use normal tool discovery. Saving settings does not start tools."
-      )
-      .font(.caption).foregroundStyle(.secondary)
-      HStack {
-        Spacer()
-        Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
-        Button("Save") {
-          for (tool, value) in paths {
-            let path = value.trimmingCharacters(in: .whitespacesAndNewlines)
-            if path.isEmpty {
-              UserDefaults.standard.removeObject(forKey: "tool." + tool)
-            } else {
-              UserDefaults.standard.set(path, forKey: "tool." + tool)
+      VStack(alignment: .leading, spacing: 10) {
+        // Kept out of the scrolling list so the note is never cut off by the button row.
+        Text(
+          "Leave an override empty to use normal tool discovery. Saving settings does not start tools."
+        )
+        .font(.system(size: 10.5))
+        .foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
+        HStack(spacing: 8) {
+          Spacer(minLength: 0)
+          IndustrialSwiftButton(title: "Cancel") { dismiss() }
+            .keyboardShortcut(.cancelAction)
+          IndustrialSwiftButton(title: "Save", kind: .primary) {
+            for (tool, value) in paths {
+              let path = value.trimmingCharacters(in: .whitespacesAndNewlines)
+              if path.isEmpty {
+                UserDefaults.standard.removeObject(forKey: "tool." + tool)
+              } else {
+                UserDefaults.standard.set(path, forKey: "tool." + tool)
+              }
             }
+            environment.reload()
+            NotificationCenter.default.post(name: .tcodeToolSettingsChanged, object: nil)
+            dismiss()
           }
-          environment.reload()
-          NotificationCenter.default.post(name: .tcodeToolSettingsChanged, object: nil)
-          dismiss()
-        }.keyboardShortcut(.defaultAction)
-      }
-    }.padding(22).frame(width: 520, height: 370)
-      .onAppear {
-        for tool in LanguageEnvironment.toolNames(pack) {
-          paths[tool] = UserDefaults.standard.string(forKey: "tool." + tool) ?? ""
+          .keyboardShortcut(.defaultAction)
         }
       }
+      .padding(.top, 12)
+      .overlay(alignment: .top) { SettingsRule() }
+    }
+    .padding(22)
+    .frame(width: 560, height: 470)
+    .background(Color(nsColor: Style.chrome))
+    .onAppear {
+      for tool in LanguageEnvironment.toolNames(pack) {
+        paths[tool] = UserDefaults.standard.string(forKey: "tool." + tool) ?? ""
+      }
+    }
   }
 
   private func chooseExecutable(_ tool: String) {

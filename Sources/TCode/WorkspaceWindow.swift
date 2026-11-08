@@ -39,7 +39,7 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
   var sidebarContent: NSView!
   var sidebarTitle: NSTextField!
   var sidebarIcon: NSImageView!
-  var sidebarBack: NSButton!
+  var sidebarBack: IconButton!
   var sidebarEmptyState: NSView!
   var tabBar: NSView!
   var tabStrip: TabStripView!
@@ -56,16 +56,17 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
   let statusEOL = NSTextField(labelWithString: "")
   let statusLanguage = NSButton()
   let statusTools = NSTextField(labelWithString: "")
-  var panelAddButton: NSButton!
+  var statusToolsRule: HairlineView!
+  var panelAddButton: IconButton!
   let inspectorView = InspectorView()
   let output = NSTextView(), debugOutput = NSTextView()
   let problemsView = ProblemsView()
   var problemsWidthConstraint: NSLayoutConstraint?
   var terminalViews: [LocalProcessTerminalView] = []
   var selectedPanel = 2
-  let panelSelector = NSSegmentedControl(
-    labels: ["Terminal", "Problems", "Build Output", "Debug Console"], trackingMode: .selectOne,
-    target: nil, action: nil)
+  let panelSelector = PanelTabs([
+    "Terminal", "Problems", "Build Output", "Debug Console",
+  ])
   var services: [String: LanguageSession] = [:]
   var languageEnabled = false
   var diagnosticList: [String: [[String: Any]]] = [:]
@@ -121,7 +122,9 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     super.init(window: w)
     w.delegate = self
     w.title = root?.lastPathComponent ?? "tCode"
-    w.subtitle = root == nil ? "Native code editor" : ""
+    // The sidebar and tabs already name the project; a titlebar title would repeat them.
+    w.titleVisibility = .hidden
+    w.subtitle = ""
     w.minSize = NSSize(
       width: Self.minimumContentSize.width,
       height: Self.minimumContentSize.height + w.frame.height - w.contentLayoutRect.height)
@@ -140,7 +143,12 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     toolbar.delegate = self
     toolbar.displayMode = .iconOnly
     w.toolbar = toolbar
-    w.toolbarStyle = .unified
+    w.toolbarStyle = .unifiedCompact
+    // The titlebar and toolbar are one flat graphite band, continuous with the sidebar and the
+    // tab strip. No material, no separator.
+    w.titlebarAppearsTransparent = true
+    w.titlebarSeparatorStyle = .none
+    w.backgroundColor = Style.chrome
     setup()
     w.contentViewController = outer
     // Installing the split view controller resizes the window to the controller's idea of a good
@@ -173,61 +181,79 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     // item only sizes the view its view controller had when the item was created.
     let side = NSStackView()
     side.orientation = .vertical
-    side.spacing = 8
-    side.edgeInsets = Style.sidebarInsets
-    let backdrop = NSVisualEffectView()
-    backdrop.material = .sidebar
-    backdrop.blendingMode = .behindWindow
-    backdrop.state = .followsWindowActiveState
+    side.alignment = .leading
+    side.spacing = 0
+    side.edgeInsets = NSEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
+    // A flat graphite sidebar closed by a single ruled edge: the structural spine of the window.
+    let surface = SurfaceView(fill: Style.chrome, edges: [.right])
     side.translatesAutoresizingMaskIntoConstraints = false
-    backdrop.addSubview(side)
+    surface.addSubview(side)
     NSLayoutConstraint.activate([
-      side.topAnchor.constraint(equalTo: backdrop.safeAreaLayoutGuide.topAnchor),
-      side.bottomAnchor.constraint(equalTo: backdrop.bottomAnchor),
-      side.leadingAnchor.constraint(equalTo: backdrop.leadingAnchor),
-      side.trailingAnchor.constraint(equalTo: backdrop.trailingAnchor),
+      side.topAnchor.constraint(equalTo: surface.safeAreaLayoutGuide.topAnchor),
+      side.bottomAnchor.constraint(equalTo: surface.bottomAnchor),
+      side.leadingAnchor.constraint(equalTo: surface.leadingAnchor),
+      side.trailingAnchor.constraint(equalTo: surface.trailingAnchor),
     ])
-    sidebar.view = backdrop
+    sidebar.view = surface
     let titleRow = NSStackView()
     titleRow.orientation = .horizontal
+    titleRow.alignment = .centerY
     titleRow.spacing = 6
-    titleRow.edgeInsets = NSEdgeInsets(top: 0, left: 2, bottom: 0, right: 2)
-    sidebarBack = NSButton(
-      image: NSImage(systemSymbolName: "chevron.left", accessibilityDescription: "Back to files")!,
-      target: self, action: #selector(backToFiles))
-    sidebarBack.bezelStyle = .accessoryBarAction
-    sidebarBack.controlSize = .small
+    titleRow.edgeInsets = NSEdgeInsets(top: 0, left: 12, bottom: 0, right: 10)
+    titleRow.heightAnchor.constraint(equalToConstant: 36).isActive = true
+    sidebarBack = IconButton(symbol: "chevron.left", label: "Back to files")
+    sidebarBack.onClick = { [weak self] in self?.backToFiles() }
     sidebarBack.isHidden = true
-    sidebarBack.toolTip = "Back to the project files"
     titleRow.addArrangedSubview(sidebarBack)
     let projectIcon = NSImageView(
-      image: NSImage(systemSymbolName: "folder.fill", accessibilityDescription: nil)!)
-    projectIcon.contentTintColor = .secondaryLabelColor
+      image: NSImage(systemSymbolName: "folder", accessibilityDescription: nil)!)
+    projectIcon.contentTintColor = .tertiaryLabelColor
     projectIcon.symbolConfiguration = NSImage.SymbolConfiguration(
-      pointSize: 12, weight: .semibold)
+      pointSize: 11, weight: .medium)
     sidebarIcon = projectIcon
     projectIcon.setAccessibilityLabel("Project folder")
     titleRow.addArrangedSubview(projectIcon)
     let projectName = NSTextField(labelWithString: "")
     projectName.font = Style.projectTitle
+    projectName.textColor = .labelColor
     projectName.lineBreakMode = .byTruncatingMiddle
     projectName.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
     sidebarTitle = projectName
     titleRow.addArrangedSubview(projectName)
     titleRow.setAccessibilityLabel("Project title")
     side.addArrangedSubview(titleRow)
+    // The vertical stack aligns to the leading edge, so the title row and its rule are pinned
+    // to the column's full width rather than hugging their content.
+    titleRow.widthAnchor.constraint(equalTo: side.widthAnchor).isActive = true
+    let titleRule = HairlineView(.horizontal)
+    side.addArrangedSubview(titleRule)
+    titleRule.widthAnchor.constraint(equalTo: side.widthAnchor).isActive = true
+    titleRule.heightAnchor.constraint(equalToConstant: 1).isActive = true
     let scroll = NSScrollView()
     scroll.hasVerticalScroller = true
+    scroll.autohidesScrollers = true
     scroll.drawsBackground = false
+    scroll.contentInsets = NSEdgeInsets(top: 6, left: 0, bottom: 0, right: 0)
     filesScroll = scroll
     let column = NSTableColumn(identifier: .init("file"))
     column.title = "Files"
+    column.width = 240
+    column.minWidth = 120
+    column.resizingMask = .autoresizingMask
     outline.addTableColumn(column)
     outline.outlineTableColumn = column
+    outline.columnAutoresizingStyle = .noColumnAutoresizing
+    outline.autoresizingMask = [.width]
     outline.headerView = nil
-    outline.rowSizeStyle = .medium
-    // Source-list styling gives the sidebar its modern rounded selection and insets.
-    outline.style = .sourceList
+    // Full-bleed rows with our own flat selection: the tree reads as a ruled column, not a
+    // floating list of pills.
+    outline.rowSizeStyle = .custom
+    outline.rowHeight = Style.rowHeight
+    outline.style = .fullWidth
+    outline.selectionHighlightStyle = .none
+    outline.indentationPerLevel = 14
+    outline.indentationMarkerFollowsCell = false
+    outline.focusRingType = .none
     outline.backgroundColor = .clear
     outline.dataSource = self
     outline.delegate = self
@@ -260,7 +286,7 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     holder.translatesAutoresizingMaskIntoConstraints = false
     sidebarContent = holder
     side.addArrangedSubview(holder)
-    holder.widthAnchor.constraint(equalTo: side.widthAnchor, constant: -16).isActive = true
+    holder.widthAnchor.constraint(equalTo: side.widthAnchor).isActive = true
     replaceNavigator(with: scroll)
     let hint = NSTextField(
       wrappingLabelWithString:
@@ -286,7 +312,8 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     content.view = container(contentStack)
     tabs.orientation = .horizontal
     tabs.alignment = .centerY
-    tabs.spacing = 4
+    // Tabs butt against one another, separated by a single rule rather than by air.
+    tabs.spacing = 0
     tabs.edgeInsets = NSEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
     // The row scrolls sideways once it is wider than the bar. The scroll view may widen its
     // document view, but the tab stack inside keeps its natural width and simply stays put.
@@ -317,13 +344,13 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     tabRow.addSubview(tabs)
     tabBarWidth = tabs.widthAnchor.constraint(equalToConstant: 0)
     NSLayoutConstraint.activate([
-      tabs.leadingAnchor.constraint(equalTo: tabRow.leadingAnchor, constant: 8),
-      tabs.topAnchor.constraint(equalTo: tabRow.topAnchor, constant: 3),
-      tabs.bottomAnchor.constraint(equalTo: tabRow.bottomAnchor, constant: -3),
+      tabs.leadingAnchor.constraint(equalTo: tabRow.leadingAnchor),
+      tabs.topAnchor.constraint(equalTo: tabRow.topAnchor),
+      tabs.bottomAnchor.constraint(equalTo: tabRow.bottomAnchor),
       tabBarWidth,
     ])
     contentStack.addArrangedSubview(breadcrumb)
-    breadcrumb.heightAnchor.constraint(equalToConstant: 24).isActive = true
+    breadcrumb.heightAnchor.constraint(equalToConstant: Style.breadcrumbHeight).isActive = true
     vertical.splitView.isVertical = false
     editorSplit.splitView.isVertical = true
     contentStack.addArrangedSubview(vertical.view)
@@ -347,7 +374,7 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     }
     for button in [statusIndent, statusLanguage] {
       button.isBordered = false
-      button.font = Style.caption
+      button.font = Style.statusInfo
       button.contentTintColor = .secondaryLabelColor
       button.target = self
       button.setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
@@ -356,11 +383,24 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     statusIndent.toolTip = "Indentation"
     statusLanguage.action = #selector(changeLanguage)
     statusLanguage.toolTip = "Document language"
-    statusRight.addArrangedSubview(statusPosition)
-    statusRight.addArrangedSubview(statusIndent)
-    statusRight.addArrangedSubview(statusEncoding)
-    statusRight.addArrangedSubview(statusEOL)
-    statusRight.addArrangedSubview(statusLanguage)
+    // A rule divides each readout, the way a spec sheet divides its columns.
+    func addSegment(_ view: NSView) {
+      if !statusRight.arrangedSubviews.isEmpty {
+        let rule = HairlineView(.vertical)
+        rule.heightAnchor.constraint(equalToConstant: 11).isActive = true
+        statusRight.addArrangedSubview(rule)
+      }
+      statusRight.addArrangedSubview(view)
+    }
+    addSegment(statusPosition)
+    addSegment(statusIndent)
+    addSegment(statusEncoding)
+    addSegment(statusEOL)
+    addSegment(statusLanguage)
+    // The tool readout is optional; its rule disappears with it.
+    statusToolsRule = HairlineView(.vertical)
+    statusToolsRule.heightAnchor.constraint(equalToConstant: 11).isActive = true
+    statusRight.addArrangedSubview(statusToolsRule)
     statusRight.addArrangedSubview(statusTools)
     statusPosition.setAccessibilityLabel("Cursor position")
     statusRight.setAccessibilityLabel("Document format and tool state")
@@ -382,27 +422,30 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     panelStack.distribution = .fill
     panelStack.spacing = 0
     panel.view = panelStack
-    let panelHeader = NSStackView()
-    panelHeader.edgeInsets = Style.panelHeaderInsets
+    // The panel header is a flat ruled band: tabs at the leading edge, actions at the trailing
+    // edge, one pixel above and below.
+    let panelHeader = SurfaceView(fill: Style.chrome, edges: [.top, .bottom])
     panelSelector.target = self
     panelSelector.action = #selector(changePanel(_:))
     panelSelector.selectedSegment = 2
-    panelSelector.setAccessibilityLabel("Bottom panel")
-    panelHeader.addArrangedSubview(panelSelector)
-    panelSelector.controlSize = .small
-    panelSelector.font = Style.caption
-    panelAddButton = NSButton(
-      image: NSImage(systemSymbolName: "plus", accessibilityDescription: "New terminal")!,
-      target: self, action: #selector(newTerminal))
-    panelAddButton.bezelStyle = .accessoryBarAction
-    panelAddButton.controlSize = .small
-    panelAddButton.toolTip = "New zsh terminal"
-    panelHeader.addArrangedSubview(panelAddButton)
-    let glass = ConcentricGlass()
-    glass.contentView = panelHeader
-    glass.effectIsInteractive = true
-    panelStack.addArrangedSubview(glass)
-    glass.heightAnchor.constraint(equalToConstant: Style.panelHeaderHeight).isActive = true
+    panelHeader.addSubview(panelSelector)
+    panelSelector.translatesAutoresizingMaskIntoConstraints = false
+    panelAddButton = IconButton(symbol: "plus", label: "New zsh terminal")
+    panelAddButton.onClick = { [weak self] in self?.newTerminal() }
+    panelHeader.addSubview(panelAddButton)
+    panelAddButton.translatesAutoresizingMaskIntoConstraints = false
+    NSLayoutConstraint.activate([
+      panelSelector.leadingAnchor.constraint(equalTo: panelHeader.leadingAnchor),
+      panelSelector.topAnchor.constraint(equalTo: panelHeader.topAnchor),
+      panelSelector.bottomAnchor.constraint(equalTo: panelHeader.bottomAnchor),
+      panelAddButton.trailingAnchor.constraint(equalTo: panelHeader.trailingAnchor, constant: -6),
+      panelAddButton.centerYAnchor.constraint(equalTo: panelHeader.centerYAnchor),
+    ])
+    panelSelector.trailingAnchor.constraint(
+      lessThanOrEqualTo: panelAddButton.leadingAnchor, constant: -8
+    ).isActive = true
+    panelStack.addArrangedSubview(panelHeader)
+    panelHeader.heightAnchor.constraint(equalToConstant: Style.panelHeaderHeight).isActive = true
     for text in [output, debugOutput] {
       text.isEditable = false
       text.isRichText = false
@@ -479,6 +522,8 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     ])
     return view
   }
+  /// The welcome screen reads like the front sheet of a technical manual: wordmark, tracked
+  /// subtitle, then ruled rows of actions and recent projects. No illustration, no pills.
   func showWelcome() {
     tabStrip?.isHidden = true
     breadcrumb.isHidden = true
@@ -486,118 +531,100 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     let vc = NSViewController()
     let stack = NSStackView()
     stack.orientation = .vertical
-    stack.alignment = .centerX
+    stack.alignment = .leading
     stack.spacing = 0
-    let icon = NSImageView(image: NSApp.applicationIconImage)
-    icon.imageScaling = .scaleProportionallyUpOrDown
-    icon.setAccessibilityLabel("tCode")
-    icon.widthAnchor.constraint(equalToConstant: 64).isActive = true
-    icon.heightAnchor.constraint(equalToConstant: 64).isActive = true
-    let title = NSTextField(labelWithString: "tCode")
-    title.font = Style.displayTitle
-    let subtitle = NSTextField(labelWithString: "A native code editor for macOS")
-    subtitle.font = Style.body
-    subtitle.textColor = .secondaryLabelColor
-    let actions = NSStackView()
-    actions.orientation = .horizontal
-    actions.spacing = 8
-    for (label, id, symbol, primary) in [
-      ("Open Folder…", "openFolder", "folder", true),
-      ("New Project…", "newProject", "plus.square", false),
-      ("New File", "newFile", "doc.badge.plus", false),
-    ] {
-      let b = NSButton(title: label, target: self, action: #selector(welcomeAction(_:)))
-      b.identifier = .init(id)
-      b.bezelStyle = .rounded
-      b.controlSize = .large
-      b.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
-      b.imagePosition = .imageLeading
-      if primary { b.keyEquivalent = "\r" }
-      actions.addArrangedSubview(b)
-    }
-    stack.addArrangedSubview(icon)
-    stack.setCustomSpacing(16, after: icon)
-    stack.addArrangedSubview(title)
-    stack.setCustomSpacing(4, after: title)
+
+    let wordmark = NSTextField(labelWithString: "tCode")
+    wordmark.font = Style.displayTitle
+    wordmark.textColor = .labelColor
+    stack.addArrangedSubview(wordmark)
+    stack.setCustomSpacing(6, after: wordmark)
+    let subtitle = Style.label(
+      "Native code editor", font: Style.sectionTitle, color: .tertiaryLabelColor,
+      tracking: 1.1, uppercase: true)
     stack.addArrangedSubview(subtitle)
-    stack.setCustomSpacing(24, after: subtitle)
+    stack.setCustomSpacing(34, after: subtitle)
+
+    stack.addArrangedSubview(Style.sectionLabel("Start"))
+    stack.setCustomSpacing(8, after: stack.arrangedSubviews.last!)
+
+    let actions = NSStackView()
+    actions.orientation = .vertical
+    actions.alignment = .leading
+    actions.spacing = 0
+    let actionRule = HairlineView(.horizontal)
+    actionRule.widthAnchor.constraint(equalToConstant: 380).isActive = true
+    actions.addArrangedSubview(actionRule)
+    for (title, id, symbol, shortcut) in [
+      ("Open Folder…", "openFolder", "folder", "⇧⌘O"),
+      ("New Project…", "newProject", "plus.square", "⌥⌘N"),
+      ("New File", "newFile", "doc.badge.plus", "⌘N"),
+    ] {
+      let row = WelcomeActionRow(symbol: symbol, title: title, shortcut: shortcut)
+      row.identifier = .init(id)
+      row.target = self
+      row.action = #selector(welcomeAction(_:))
+      row.widthAnchor.constraint(equalToConstant: 380).isActive = true
+      actions.addArrangedSubview(row)
+    }
     stack.addArrangedSubview(actions)
+
     let recents =
       (UserDefaults.standard.stringArray(forKey: "recentProjects") ?? [])
       .filter { FileManager.default.fileExists(atPath: $0) }
-      .prefix(8)
+      .prefix(6)
     if !recents.isEmpty {
-      stack.setCustomSpacing(28, after: actions)
-      stack.addArrangedSubview(recentList(Array(recents)))
+      stack.setCustomSpacing(30, after: actions)
+      stack.addArrangedSubview(Style.sectionLabel("Recent"))
+      stack.setCustomSpacing(8, after: stack.arrangedSubviews.last!)
+      let list = NSStackView()
+      list.orientation = .vertical
+      list.alignment = .leading
+      list.spacing = 0
+      let listRule = HairlineView(.horizontal)
+      listRule.widthAnchor.constraint(equalToConstant: 380).isActive = true
+      list.addArrangedSubview(listRule)
+      for path in recents {
+        let row = RecentProjectRow(
+          name: URL(fileURLWithPath: path).lastPathComponent, path: path)
+        row.widthAnchor.constraint(equalToConstant: 380).isActive = true
+        row.onClick = {
+          (NSApp.delegate as? AppDelegate)?.presentWorkspace(URL(fileURLWithPath: path))
+        }
+        list.addArrangedSubview(row)
+      }
+      stack.addArrangedSubview(list)
     }
+
     let holder = NSView()
     holder.addSubview(stack)
     stack.translatesAutoresizingMaskIntoConstraints = false
     NSLayoutConstraint.activate([
       stack.centerXAnchor.constraint(equalTo: holder.centerXAnchor),
       stack.centerYAnchor.constraint(equalTo: holder.centerYAnchor),
-      stack.widthAnchor.constraint(lessThanOrEqualToConstant: 640),
-      stack.leadingAnchor.constraint(greaterThanOrEqualTo: holder.leadingAnchor, constant: 24),
-      stack.trailingAnchor.constraint(lessThanOrEqualTo: holder.trailingAnchor, constant: -24),
-      stack.topAnchor.constraint(greaterThanOrEqualTo: holder.topAnchor, constant: 24),
-      stack.bottomAnchor.constraint(lessThanOrEqualTo: holder.bottomAnchor, constant: -24),
+      stack.widthAnchor.constraint(equalToConstant: 380),
+      stack.topAnchor.constraint(greaterThanOrEqualTo: holder.topAnchor, constant: 32),
+      stack.bottomAnchor.constraint(lessThanOrEqualTo: holder.bottomAnchor, constant: -32),
+    ])
+    // Return opens a folder from the welcome screen without drawing another control.
+    let defaultAction = NSButton(
+      title: "", target: self, action: #selector(welcomeAction(_:)))
+    defaultAction.identifier = .init("openFolder")
+    defaultAction.keyEquivalent = "\r"
+    defaultAction.isBordered = false
+    defaultAction.alphaValue = 0
+    defaultAction.translatesAutoresizingMaskIntoConstraints = false
+    holder.addSubview(defaultAction)
+    NSLayoutConstraint.activate([
+      defaultAction.widthAnchor.constraint(equalToConstant: 1),
+      defaultAction.heightAnchor.constraint(equalToConstant: 1),
+      defaultAction.trailingAnchor.constraint(equalTo: holder.trailingAnchor),
+      defaultAction.bottomAnchor.constraint(equalTo: holder.bottomAnchor),
     ])
     vc.view = holder
     editorSplit.addSplitViewItem(NSSplitViewItem(viewController: vc))
   }
-  @objc func openRecentProject(_ sender: NSButton) {
-    guard let path = sender.representedPath else { return }
-    (NSApp.delegate as? AppDelegate)?.presentWorkspace(URL(fileURLWithPath: path))
-  }
-  /// Recent projects as a quiet list: the name leads, the path whispers underneath.
-  func recentList(_ paths: [String]) -> NSView {
-    let rows = NSStackView()
-    rows.orientation = .vertical
-    rows.alignment = .leading
-    rows.spacing = 2
-    let header = NSTextField(labelWithString: "RECENT PROJECTS")
-    header.font = Style.sectionTitle
-    header.textColor = .tertiaryLabelColor
-    rows.addArrangedSubview(header)
-    rows.setCustomSpacing(6, after: header)
-    for path in paths {
-      let button = NSButton(title: "", target: self, action: #selector(openRecentProject(_:)))
-      button.isBordered = false
-      button.alignment = .left
-      button.usesSingleLineMode = false
-      button.image = NSImage(systemSymbolName: "folder", accessibilityDescription: nil)
-      button.imagePosition = .imageLeading
-      button.attributedTitle = recentTitle(path)
-      button.representedPath = path
-      button.toolTip = path
-      button.setAccessibilityLabel("Open recent project " + path)
-      button.widthAnchor.constraint(equalToConstant: 520).isActive = true
-      rows.addArrangedSubview(button)
-    }
-    return rows
-  }
-  /// Two-line recent-project label: name in primary weight, home-relative path underneath.
-  func recentTitle(_ path: String) -> NSAttributedString {
-    let paragraph = NSMutableParagraphStyle()
-    paragraph.lineBreakMode = .byTruncatingMiddle
-    let result = NSMutableAttributedString()
-    result.append(
-      NSAttributedString(
-        string: URL(fileURLWithPath: path).lastPathComponent + "\n",
-        attributes: [
-          .font: NSFont.systemFont(ofSize: 12, weight: .medium),
-          .foregroundColor: NSColor.labelColor, .paragraphStyle: paragraph,
-        ]))
-    result.append(
-      NSAttributedString(
-        string: path.replacingOccurrences(of: NSHomeDirectory(), with: "~"),
-        attributes: [
-          .font: Style.caption, .foregroundColor: NSColor.tertiaryLabelColor,
-          .paragraphStyle: paragraph,
-        ]))
-    return result
-  }
-  @objc func welcomeAction(_ sender: NSButton) {
+  @objc func welcomeAction(_ sender: NSControl) {
     if sender.identifier?.rawValue == "newFile" {
       perform("newFile")
     } else {
@@ -784,6 +811,15 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     guard let node = rootNode else { return }
     loadChildren(node, refresh: true)
   }
+  /// The tree is a single column, so it should span the sidebar. NSTableView does not keep a
+  /// column in step with the scroll view on its own, so it is fitted whenever the tree reloads
+  /// or the window changes width.
+  func fitOutlineColumns() {
+    outline.sizeLastColumnToFit()
+  }
+  func windowDidResize(_ notification: Notification) {
+    fitOutlineColumns()
+  }
   func loadChildren(_ node: FileNode, refresh: Bool = false) {
     guard !node.loading, node.directory, !node.symlink, node.children == nil || refresh else {
       return
@@ -804,6 +840,7 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
         }
         node.loading = false
         outline.reloadItem(node === rootNode ? nil : node, reloadChildren: true)
+        fitOutlineColumns()
         if let activeURL = active?.url {
           DispatchQueue.main.async { [weak self] in self?.selectInOutline(activeURL) }
         }
@@ -844,31 +881,30 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
         systemSymbolName: n.directory ? "folder" : symbol(n.url.pathExtension),
         accessibilityDescription: nil)!)
     image.contentTintColor = n.directory ? .secondaryLabelColor : .tertiaryLabelColor
+    image.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 12, weight: .regular)
     let label = NSTextField(labelWithString: n.url.lastPathComponent)
     label.lineBreakMode = .byTruncatingMiddle
     let isActive = active?.url.map { sameFile($0, n.url) } ?? false
     label.font = isActive ? NSFont.systemFont(ofSize: 12, weight: .medium) : Style.body
-    label.textColor = .labelColor
-    let marker = NSView()
-    marker.wantsLayer = true
-    marker.layer?.backgroundColor =
-      isActive ? NSColor.controlAccentColor.cgColor : NSColor.clear.cgColor
-    marker.setAccessibilityElement(false)
-    marker.widthAnchor.constraint(equalToConstant: 2).isActive = true
-    marker.heightAnchor.constraint(equalToConstant: 14).isActive = true
-    let stack = NSStackView(views: [marker, image, label])
-    stack.spacing = 7
-    cell.addSubview(stack)
-    stack.translatesAutoresizingMaskIntoConstraints = false
-    image.widthAnchor.constraint(equalToConstant: 16).isActive = true
+    label.textColor = isActive ? .labelColor : .secondaryLabelColor
+    image.translatesAutoresizingMaskIntoConstraints = false
+    label.translatesAutoresizingMaskIntoConstraints = false
+    cell.addSubview(image)
+    cell.addSubview(label)
     NSLayoutConstraint.activate([
-      stack.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: 2),
-      stack.trailingAnchor.constraint(equalTo: cell.trailingAnchor, constant: -4),
-      stack.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
+      image.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: 12),
+      image.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
+      image.widthAnchor.constraint(equalToConstant: 15),
+      label.leadingAnchor.constraint(equalTo: image.trailingAnchor, constant: 6),
+      label.trailingAnchor.constraint(lessThanOrEqualTo: cell.trailingAnchor, constant: -6),
+      label.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
     ])
     cell.textField = label
     cell.imageView = image
     return cell
+  }
+  func outlineView(_ outlineView: NSOutlineView, rowViewForItem item: Any) -> NSTableRowView? {
+    IndustrialRowView()
   }
   func symbol(_ ext: String) -> String {
     [
@@ -1171,7 +1207,7 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     let widths = tabs.arrangedSubviews.map(\.fittingSize.width)
     let natural = widths.reduce(0, +) + tabs.spacing * CGFloat(max(0, widths.count - 1))
     tabBarWidth.constant = natural
-    tabBar.frame.size.width = max(natural + 16, tabBar.frame.width)
+    tabBar.frame.size.width = max(natural, tabBar.frame.width)
   }
   @objc func tabSelected(_ button: TabButton) {
     select(button.document)
@@ -1236,6 +1272,7 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     statusLanguage.title = recognizeLanguage(doc)?.association.languageID.uppercased() ?? "TEXT"
     statusTools.stringValue = tools
     statusTools.isHidden = tools.isEmpty
+    statusToolsRule.isHidden = tools.isEmpty
     let documentBreakpoints = doc.url.flatMap { breakpoints[$0] } ?? []
     let inspectorKey = [
       doc.id.uuidString, doc.url?.path ?? "", String(doc.isDirty), doc.languagePackID ?? "",
@@ -1618,7 +1655,7 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
   }
   func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
     [
-      .toggleSidebar, .flexibleSpace, .init("quickOpen"), .init("run"), .init("agent"),
+      .init("sidebar"), .flexibleSpace, .init("quickOpen"), .init("run"), .init("agent"),
       .init("panel"), .init("inspector"),
     ]
   }
@@ -1629,8 +1666,8 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     _ toolbar: NSToolbar, itemForItemIdentifier id: NSToolbarItem.Identifier,
     willBeInsertedIntoToolbar: Bool
   ) -> NSToolbarItem? {
-    if id == .toggleSidebar { return nil }
     let names = [
+      "sidebar": ("sidebar.left", "Toggle Sidebar"),
       "quickOpen": ("magnifyingglass", "Quick Open"), "run": ("play", "Run"),
       "agent": ("bubble.left.and.bubble.right", "Agent"),
       "panel": ("rectangle.bottomthird.inset.filled", "Toggle Bottom Panel"),
@@ -1643,7 +1680,7 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: title)
     item.target = self
     item.action = #selector(toolbarAction(_:))
-    item.isBordered = true
+    item.isBordered = false
     return item
   }
   @objc func toolbarAction(_ sender: NSToolbarItem) { perform(sender.itemIdentifier.rawValue) }
@@ -1656,7 +1693,7 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
       if let input = agentPanel?.input { window?.makeFirstResponder(input) }
     }
   }
-  @objc func changePanel(_ sender: NSSegmentedControl) {
+  @objc func changePanel(_ sender: PanelTabs) {
     selectedPanel = sender.selectedSegment
     showPanelContent()
   }
@@ -1716,8 +1753,9 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     stack.alignment = .centerX
     stack.spacing = 8
     if let button, let action {
-      let b = NSButton(title: button, target: self, action: action)
-      b.bezelStyle = .rounded
+      let b = IndustrialButton(button, kind: .secondary)
+      b.target = self
+      b.action = action
       stack.setCustomSpacing(14, after: label)
       stack.addArrangedSubview(b)
     }
@@ -1789,8 +1827,8 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     super.init(frame: frameRect)
     stack.orientation = .horizontal
     stack.alignment = .centerY
-    stack.spacing = 4
-    stack.edgeInsets = NSEdgeInsets(top: 0, left: 10, bottom: 0, right: 10)
+    stack.spacing = 6
+    stack.edgeInsets = NSEdgeInsets(top: 0, left: 14, bottom: 0, right: 10)
     stack.translatesAutoresizingMaskIntoConstraints = false
     addSubview(stack)
     NSLayoutConstraint.activate([
@@ -1816,17 +1854,15 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
     }
     for (index, component) in components.enumerated() {
       if index > 0 {
-        let chevron = NSImageView(
-          image: NSImage(systemSymbolName: "chevron.right", accessibilityDescription: nil)!)
-        chevron.contentTintColor = .tertiaryLabelColor
-        chevron.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 8, weight: .medium)
-        stack.addArrangedSubview(chevron)
+        let separator = Style.label("/", font: Style.monoSmall, color: .tertiaryLabelColor)
+        stack.addArrangedSubview(separator)
       }
+      let last = index == components.count - 1
       let label = NSTextField(labelWithString: component)
       label.font =
-        index == components.count - 1
-        ? NSFont.systemFont(ofSize: 12, weight: .medium) : Style.caption
-      label.textColor = index == components.count - 1 ? .labelColor : .tertiaryLabelColor
+        last
+        ? NSFont.monospacedSystemFont(ofSize: 10.5, weight: .medium) : Style.monoSmall
+      label.textColor = last ? .labelColor : .tertiaryLabelColor
       label.lineBreakMode = .byTruncatingMiddle
       label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
       stack.addArrangedSubview(label)
@@ -1836,23 +1872,25 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
   override func draw(_ dirtyRect: NSRect) {
     Style.editorBackground.setFill()
     bounds.fill()
-    Style.subtleSeparator.setFill()
-    NSRect(x: 0, y: 0, width: bounds.width, height: 1).fill()
+    Style.rule(NSRect(x: 0, y: 0, width: bounds.width, height: 1))
   }
 }
 
 @MainActor final class TabStripView: NSView {
   override func draw(_ dirtyRect: NSRect) {
-    Style.tabStripBackground.setFill()
+    Style.tabStrip.setFill()
     bounds.fill()
+    // The selected tab paints over this rule, so the strip reads as continuous with the page.
+    Style.rule(NSRect(x: 0, y: 0, width: bounds.width, height: 1))
   }
 }
 
 /// A hairline closes the window at the top of the status bar; the text stays quiet.
 @MainActor final class StatusBarView: NSView {
   override func draw(_ dirtyRect: NSRect) {
-    Style.subtleSeparator.setFill()
-    NSRect(x: 0, y: bounds.maxY - 1, width: bounds.width, height: 1).fill()
+    Style.chrome.setFill()
+    bounds.fill()
+    Style.rule(NSRect(x: 0, y: bounds.maxY - 1, width: bounds.width, height: 1))
   }
 }
 
@@ -1861,17 +1899,6 @@ final class WorkspaceWindow: NSWindowController, NSWindowDelegate, NSOutlineView
 @MainActor final class StatusLabel: NSTextField {
   override var stringValue: String {
     didSet { toolTip = stringValue }
-  }
-}
-
-private var pathAssociation: UInt8 = 0
-extension NSButton {
-  var representedPath: String? {
-    get { objc_getAssociatedObject(self, &pathAssociation) as? String }
-    set {
-      objc_setAssociatedObject(
-        self, &pathAssociation, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-    }
   }
 }
 
@@ -1920,12 +1947,12 @@ extension NSButton {
     needsDisplay = true
   }
   private var closeRect: NSRect {
-    NSRect(x: bounds.maxX - 20, y: 0, width: 20, height: bounds.height)
+    NSRect(x: bounds.maxX - 22, y: 0, width: 22, height: bounds.height)
   }
   override var intrinsicContentSize: NSSize {
     let font = Style.tabTitle(selected: selected)
     let width = ceil((document.title as NSString).size(withAttributes: [.font: font]).width)
-    return NSSize(width: min(width + 30, Style.tabMaxWidth), height: Style.tabHeight)
+    return NSSize(width: min(width + 34, Style.tabMaxWidth), height: Style.tabHeight)
   }
   override func updateTrackingAreas() {
     super.updateTrackingAreas()
@@ -1952,15 +1979,16 @@ extension NSButton {
     if selected {
       Style.editorBackground.setFill()
       bounds.fill()
-      NSColor.controlAccentColor.setFill()
-      NSRect(x: 8, y: 0, width: max(0, bounds.width - 16), height: 2).fill()
+      // A signal rule across the top edge marks the active document.
+      Style.accent.setFill()
+      NSRect(x: 10, y: bounds.maxY - 2, width: max(0, bounds.width - 20), height: 2).fill()
     } else if hovered {
-      NSColor.labelColor.withAlphaComponent(0.05).setFill()
+      Style.rowHover.setFill()
       bounds.fill()
     }
     if !selected {
-      Style.subtleSeparator.setFill()
-      NSRect(x: bounds.maxX - 1, y: 5, width: 1, height: bounds.height - 10).fill()
+      Style.verticalRule(
+        NSRect(x: bounds.maxX - 1, y: 11, width: 1, height: bounds.height - 22))
     }
     let font = Style.tabTitle(selected: selected)
     let paragraph = NSMutableParagraphStyle()
@@ -1972,21 +2000,21 @@ extension NSButton {
     ]
     let height = ceil(font.ascender - font.descender)
     let rect = NSRect(
-      x: 10, y: bounds.midY - height / 2, width: max(4, bounds.width - 30), height: height)
+      x: 12, y: bounds.midY - height / 2, width: max(4, bounds.width - 34), height: height)
     (document.title as NSString).draw(in: rect, withAttributes: attributes)
-    let markRect = NSRect(x: bounds.maxX - 17, y: bounds.midY - 5, width: 10, height: 10)
+    let markRect = NSRect(x: bounds.maxX - 20, y: bounds.midY - 5, width: 12, height: 10)
     if hovered {
       let mark = NSAttributedString(
         string: "✕",
         attributes: [
-          .font: NSFont.systemFont(ofSize: 9, weight: .medium),
+          .font: NSFont.systemFont(ofSize: 9, weight: .semibold),
           .foregroundColor: NSColor.secondaryLabelColor,
         ])
       mark.draw(in: markRect)
     } else if modified {
-      NSColor.controlAccentColor.setFill()
-      NSBezierPath(ovalIn: NSRect(x: markRect.midX - 2.5, y: markRect.midY - 2.5, width: 5, height: 5))
-        .fill()
+      // A square, not a dot: unsaved state is a readout, not a notification.
+      Style.accent.setFill()
+      NSRect(x: markRect.midX - 2, y: markRect.midY - 2, width: 4, height: 4).fill()
     }
   }
   override func menu(for event: NSEvent) -> NSMenu? {
@@ -2025,11 +2053,11 @@ extension NSButton {
 
 @MainActor
 final class PaletteController: NSWindowController, NSTableViewDataSource, NSTableViewDelegate,
-  NSSearchFieldDelegate
+  NSTextFieldDelegate
 {
   let items: [String], action: (Int) -> Void
   var filtered: [Int] = []
-  let table = NSTableView(), search = NSSearchField(),
+  let table = NSTableView(), search = NSTextField(),
     empty = NSTextField(labelWithString: "No matches")
   init(title: String, items: [String], action: @escaping (Int) -> Void) {
     self.items = items
@@ -2039,6 +2067,7 @@ final class PaletteController: NSWindowController, NSTableViewDataSource, NSTabl
       contentRect: NSRect(x: 0, y: 0, width: 680, height: 430), styleMask: [.titled, .closable],
       backing: .buffered, defer: false)
     w.title = title
+    w.backgroundColor = Style.chrome
     super.init(window: w)
     let stack = NSStackView()
     stack.orientation = .vertical
@@ -2047,9 +2076,31 @@ final class PaletteController: NSWindowController, NSTableViewDataSource, NSTabl
     search.placeholderString = "Type to filter…"
     search.delegate = self
     search.action = nil
-    search.controlSize = .large
+    search.controlSize = .regular
     search.font = Style.body
-    stack.addArrangedSubview(search)
+    search.isBordered = false
+    search.drawsBackground = false
+    search.focusRingType = .none
+    let fieldBox = FieldBox()
+    fieldBox.translatesAutoresizingMaskIntoConstraints = false
+    search.translatesAutoresizingMaskIntoConstraints = false
+    fieldBox.addSubview(search)
+    let glyph = NSImageView(
+      image: NSImage(systemSymbolName: "magnifyingglass", accessibilityDescription: nil)!)
+    glyph.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 11, weight: .medium)
+    glyph.contentTintColor = .tertiaryLabelColor
+    glyph.translatesAutoresizingMaskIntoConstraints = false
+    fieldBox.addSubview(glyph)
+    NSLayoutConstraint.activate([
+      fieldBox.heightAnchor.constraint(equalToConstant: 34),
+      glyph.leadingAnchor.constraint(equalTo: fieldBox.leadingAnchor, constant: 11),
+      glyph.centerYAnchor.constraint(equalTo: fieldBox.centerYAnchor),
+      search.leadingAnchor.constraint(equalTo: glyph.trailingAnchor, constant: 7),
+      search.trailingAnchor.constraint(equalTo: fieldBox.trailingAnchor, constant: -10),
+      search.centerYAnchor.constraint(equalTo: fieldBox.centerYAnchor),
+    ])
+    stack.addArrangedSubview(fieldBox)
+    fieldBox.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -32).isActive = true
     let sc = NSScrollView()
     sc.hasVerticalScroller = true
     sc.autohidesScrollers = true
@@ -2059,7 +2110,9 @@ final class PaletteController: NSWindowController, NSTableViewDataSource, NSTabl
     table.headerView = nil
     table.rowHeight = 26
     table.backgroundColor = .clear
-    table.style = .inset
+    table.style = .fullWidth
+    table.selectionHighlightStyle = .none
+    table.intercellSpacing = .zero
     table.dataSource = self
     table.delegate = self
     table.target = self
@@ -2076,22 +2129,23 @@ final class PaletteController: NSWindowController, NSTableViewDataSource, NSTabl
       empty.centerXAnchor.constraint(equalTo: sc.centerXAnchor),
       empty.centerYAnchor.constraint(equalTo: sc.centerYAnchor),
     ])
-    search.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -32).isActive = true
-    sc.widthAnchor.constraint(equalTo: search.widthAnchor).isActive = true
-    let cancelButton = NSButton(title: "Cancel", target: self, action: #selector(cancel))
+    sc.widthAnchor.constraint(equalTo: fieldBox.widthAnchor).isActive = true
+    let cancelButton = IndustrialButton("Cancel", kind: .secondary)
     cancelButton.keyEquivalent = "\u{1b}"
-    let openButton = NSButton(title: "Open", target: self, action: #selector(accept))
+    cancelButton.onClick = { [weak self] in self?.cancel() }
+    let openButton = IndustrialButton("Open", kind: .primary)
     openButton.keyEquivalent = "\r"
-    // A footer pairs the keyboard hints with the standard trailing buttons.
+    openButton.onClick = { [weak self] in self?.accept() }
+    // A footer pairs the keyboard hints with the trailing actions.
     let hint = NSTextField(labelWithString: "↑↓ Navigate   ↵ Open   esc Close")
-    hint.font = Style.caption
+    hint.font = Style.monoSmall
     hint.textColor = .tertiaryLabelColor
     let spacer = NSView()
     spacer.setContentHuggingPriority(NSLayoutConstraint.Priority(1), for: .horizontal)
     let buttons = NSStackView(views: [hint, spacer, cancelButton, openButton])
     buttons.spacing = 8
     stack.addArrangedSubview(buttons)
-    buttons.widthAnchor.constraint(equalTo: search.widthAnchor).isActive = true
+    buttons.widthAnchor.constraint(equalTo: fieldBox.widthAnchor).isActive = true
     w.contentView = stack
     w.initialFirstResponder = search
     table.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
@@ -2100,10 +2154,23 @@ final class PaletteController: NSWindowController, NSTableViewDataSource, NSTabl
   func numberOfRows(in tableView: NSTableView) -> Int { filtered.count }
   func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView?
   {
+    let cell = NSTableCellView()
     let field = NSTextField(labelWithString: items[filtered[row]])
     field.font = Style.body
     field.lineBreakMode = .byTruncatingMiddle
-    return field
+    field.translatesAutoresizingMaskIntoConstraints = false
+    cell.addSubview(field)
+    NSLayoutConstraint.activate([
+      field.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: 8),
+      field.trailingAnchor.constraint(equalTo: cell.trailingAnchor, constant: -8),
+      field.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
+    ])
+    cell.textField = field
+    return cell
+  }
+
+  func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
+    IndustrialRowView()
   }
   func controlTextDidChange(_ notification: Notification) {
     let query = search.stringValue.lowercased()

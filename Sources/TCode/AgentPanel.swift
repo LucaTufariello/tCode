@@ -21,11 +21,11 @@ struct AgentConversation {
   let transcript = NSTextView()
   let input = NSTextView()
   let inputScroll = NSScrollView()
-  let sendButton = NSButton()
-  let stopButton = NSButton()
-  let newChatButton = NSButton()
-  let settingsButton = NSButton()
-  let conversationPopup = NSPopUpButton()
+  let sendButton = IndustrialButton("Send", kind: .primary)
+  let stopButton = IndustrialButton("Stop", kind: .secondary)
+  let newChatButton = IconButton(symbol: "square.and.pencil", label: "New conversation")
+  let settingsButton = IconButton(symbol: "gearshape", label: "Agent settings")
+  let conversationPopup = IndustrialPopUp()
   let statusLabel = NSTextField(labelWithString: "Ready")
   let contextLabel = NSTextField(labelWithString: "")
   let placeholder = NSTextField(labelWithString: "Ask the agent…")
@@ -55,7 +55,7 @@ struct AgentConversation {
   override func loadView() {
     let root = NSView()
     root.wantsLayer = true
-    root.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+    root.layer?.backgroundColor = Style.chrome.cgColor
     let stack = NSStackView()
     stack.orientation = .vertical
     stack.alignment = .centerX
@@ -74,30 +74,14 @@ struct AgentConversation {
     header.orientation = .horizontal
     header.alignment = .centerY
     header.spacing = 6
-    header.edgeInsets = NSEdgeInsets(top: 6, left: 10, bottom: 6, right: 8)
+    header.edgeInsets = NSEdgeInsets(top: 0, left: 12, bottom: 0, right: 8)
     let title = NSTextField(labelWithString: "Agent")
     title.font = Style.projectTitle
-    statusLabel.font = Style.caption
+    statusLabel.font = Style.monoSmall
     statusLabel.textColor = .tertiaryLabelColor
-    newChatButton.image = NSImage(
-      systemSymbolName: "square.and.pencil", accessibilityDescription: "New chat")
-    newChatButton.bezelStyle = .accessoryBarAction
-    newChatButton.controlSize = .small
-    newChatButton.target = self
-    newChatButton.action = #selector(newChat)
-    newChatButton.toolTip = "New conversation"
-    settingsButton.image = NSImage(
-      systemSymbolName: "gearshape", accessibilityDescription: "Agent settings")
-    settingsButton.bezelStyle = .accessoryBarAction
-    settingsButton.controlSize = .small
-    settingsButton.target = self
-    settingsButton.action = #selector(openSettings)
-    settingsButton.toolTip = "Agent settings"
-    conversationPopup.target = self
-    conversationPopup.action = #selector(switchConversation(_:))
-    conversationPopup.controlSize = .small
-    conversationPopup.font = Style.caption
-    conversationPopup.widthAnchor.constraint(equalToConstant: 128).isActive = true
+    newChatButton.onClick = { [weak self] in self?.newChat() }
+    settingsButton.onClick = { [weak self] in self?.openSettings() }
+    conversationPopup.onSelect = { [weak self] index in self?.switchConversation(index) }
     conversationPopup.toolTip = "Conversations"
     let spacer = NSView()
     spacer.setContentHuggingPriority(NSLayoutConstraint.Priority(1), for: .horizontal)
@@ -109,9 +93,13 @@ struct AgentConversation {
     header.addArrangedSubview(settingsButton)
     stack.addArrangedSubview(header)
     header.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
-    header.heightAnchor.constraint(equalToConstant: Style.panelHeaderHeight).isActive = true
+    header.heightAnchor.constraint(equalToConstant: 36).isActive = true
+    let headerRule = HairlineView(.horizontal)
+    stack.addArrangedSubview(headerRule)
+    headerRule.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
+    headerRule.heightAnchor.constraint(equalToConstant: 1).isActive = true
 
-    contextLabel.font = Style.caption
+    contextLabel.font = Style.monoSmall
     contextLabel.textColor = .tertiaryLabelColor
     contextLabel.lineBreakMode = .byTruncatingMiddle
     contextLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
@@ -119,10 +107,10 @@ struct AgentConversation {
     contextLabel.translatesAutoresizingMaskIntoConstraints = false
     contextRow.addSubview(contextLabel)
     NSLayoutConstraint.activate([
-      contextLabel.leadingAnchor.constraint(equalTo: contextRow.leadingAnchor, constant: 10),
-      contextLabel.trailingAnchor.constraint(equalTo: contextRow.trailingAnchor, constant: -10),
+      contextLabel.leadingAnchor.constraint(equalTo: contextRow.leadingAnchor, constant: 12),
+      contextLabel.trailingAnchor.constraint(equalTo: contextRow.trailingAnchor, constant: -12),
       contextLabel.centerYAnchor.constraint(equalTo: contextRow.centerYAnchor),
-      contextRow.heightAnchor.constraint(equalToConstant: 20),
+      contextRow.heightAnchor.constraint(equalToConstant: 22),
     ])
     stack.addArrangedSubview(contextRow)
     contextRow.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
@@ -133,7 +121,7 @@ struct AgentConversation {
     transcript.font = Style.body
     transcript.textColor = .labelColor
     transcript.backgroundColor = Style.editorBackground
-    transcript.textContainerInset = NSSize(width: 12, height: 10)
+    transcript.textContainerInset = NSSize(width: 14, height: 10)
     transcript.isVerticallyResizable = true
     transcript.isHorizontallyResizable = false
     transcript.textContainer?.widthTracksTextView = true
@@ -153,10 +141,10 @@ struct AgentConversation {
     scroll.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
 
     inputBox.wantsLayer = true
-    inputBox.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
-    inputBox.layer?.cornerRadius = 6
+    inputBox.layer?.backgroundColor = Style.control.cgColor
+    inputBox.layer?.cornerRadius = Style.radius
     inputBox.layer?.borderWidth = 1
-    inputBox.layer?.borderColor = NSColor.separatorColor.cgColor
+    inputBox.layer?.borderColor = Style.hairlineStrong.cgColor
     input.frame = NSRect(x: 0, y: 0, width: 300, height: 72)
     input.isEditable = true
     input.isRichText = false
@@ -201,23 +189,15 @@ struct AgentConversation {
     inputBox.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -20).isActive = true
     inputBox.heightAnchor.constraint(equalToConstant: 84).isActive = true
 
-    sendButton.title = "Send"
-    sendButton.bezelStyle = .rounded
-    sendButton.controlSize = .small
-    sendButton.target = self
-    sendButton.action = #selector(sendMessage)
-    stopButton.title = "Stop"
-    stopButton.bezelStyle = .rounded
-    stopButton.controlSize = .small
-    stopButton.target = self
-    stopButton.action = #selector(stop)
+    sendButton.onClick = { [weak self] in self?.sendMessage() }
+    stopButton.onClick = { [weak self] in self?.stop() }
     stopButton.isHidden = true
     let footerSpacer = NSView()
     footerSpacer.setContentHuggingPriority(NSLayoutConstraint.Priority(1), for: .horizontal)
-    let footer = NSStackView(views: [sendButton, stopButton, footerSpacer])
+    let footer = NSStackView(views: [footerSpacer, stopButton, sendButton])
     footer.orientation = .horizontal
-    footer.spacing = 6
-    footer.edgeInsets = NSEdgeInsets(top: 6, left: 10, bottom: 0, right: 10)
+    footer.spacing = 8
+    footer.edgeInsets = NSEdgeInsets(top: 8, left: 10, bottom: 0, right: 10)
     stack.addArrangedSubview(footer)
     footer.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
 
@@ -232,8 +212,8 @@ struct AgentConversation {
 
   func themeChanged() {
     transcript.backgroundColor = Style.editorBackground
-    inputBox.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
-    inputBox.layer?.borderColor = NSColor.separatorColor.cgColor
+    inputBox.layer?.backgroundColor = Style.control.cgColor
+    inputBox.layer?.borderColor = Style.hairlineStrong.cgColor
   }
 
   func refreshContext() {
@@ -265,17 +245,11 @@ struct AgentConversation {
   }
 
   private func updateConversationPopup() {
-    conversationPopup.removeAllItems()
-    for conversation in conversations {
-      conversationPopup.addItem(withTitle: conversation.title)
-    }
-    if conversations.indices.contains(activeConversation) {
-      conversationPopup.selectItem(at: activeConversation)
-    }
+    conversationPopup.titles = conversations.map(\.title)
+    conversationPopup.selectedIndex = activeConversation
   }
 
-  @objc func switchConversation(_ sender: NSPopUpButton) {
-    let index = sender.indexOfSelectedItem
+  func switchConversation(_ index: Int) {
     guard conversations.indices.contains(index) else { return }
     cancelStream()
     activeConversation = index
@@ -445,8 +419,8 @@ struct AgentConversation {
   }
 
   private func updatePlaceholder() {
-    let editing = input.window?.firstResponder === input
-    placeholder.isHidden = !input.string.isEmpty || editing
+    // Focus alone should not blank the box: the hint stays until there is text to show instead.
+    placeholder.isHidden = !input.string.isEmpty
   }
 
   func textDidChange(_ notification: Notification) {
@@ -455,10 +429,12 @@ struct AgentConversation {
 
   func textDidBeginEditing(_ notification: Notification) {
     updatePlaceholder()
+    inputBox.layer?.borderColor = Style.accent.cgColor
   }
 
   func textDidEndEditing(_ notification: Notification) {
     updatePlaceholder()
+    inputBox.layer?.borderColor = Style.hairlineStrong.cgColor
   }
 
   func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
@@ -485,8 +461,8 @@ struct AgentConversation {
   private func appendHeader(_ title: String, color: NSColor) {
     let prefix = (transcript.textStorage?.length ?? 0) == 0 ? "" : "\n"
     append(
-      prefix + title + "\n",
-      attributes: [.font: Style.sectionTitle, .foregroundColor: color])
+      prefix + title.uppercased() + "\n",
+      attributes: [.font: Style.sectionTitle, .foregroundColor: color, .kern: 0.9])
   }
 
   private func appendBody(_ text: String) {

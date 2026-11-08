@@ -170,7 +170,7 @@ final class EditorTests: XCTestCase {
       XCTAssertEqual(panel.conversations.count, 1)
       panel.newChat()
       XCTAssertEqual(panel.conversations.count, 2)
-      XCTAssertEqual(panel.conversationPopup.numberOfItems, 2)
+      XCTAssertEqual(panel.conversationPopup.titles.count, 2)
       window.cleanup()
     }
   }

@@ -176,7 +176,7 @@ import TCodeCore
     self.editor = editor
     super.init(scrollView: scroll, orientation: .verticalRuler)
     clientView = editor
-    ruleThickness = 52
+    ruleThickness = 46
     let recognizer = NSClickGestureRecognizer(target: self, action: #selector(clicked(_:)))
     recognizer.buttonMask = 1
     addGestureRecognizer(recognizer)
@@ -204,6 +204,8 @@ import TCodeCore
     else { return }
     Style.editorBackground.setFill()
     bounds.fill()
+    // A hairline closes the gutter against the code.
+    Style.verticalRule(NSRect(x: bounds.maxX - 1, y: 0, width: 1, height: bounds.height))
     let visible = scrollView.contentView.bounds
     let glyphs = lm.glyphRange(
       forBoundingRect: visible.offsetBy(
@@ -235,18 +237,19 @@ import TCodeCore
       {
         let y = r.minY + editor.textContainerOrigin.y - visible.minY
         if breakpoints.contains(line) {
+          // A hard square, not a dot: breakpoints are instrument state.
           NSColor.systemRed.setFill()
-          NSBezierPath(ovalIn: NSRect(x: 5, y: y + 3, width: 9, height: 9)).fill()
+          NSRect(x: 6, y: y + 4, width: 8, height: 8).fill()
         }
         let label = String(line) as NSString
         let isActive = line == activeLine
         let attributes: [NSAttributedString.Key: Any] = [
           .font: NSFont.monospacedDigitSystemFont(
-            ofSize: 11, weight: isActive ? .medium : .regular),
+            ofSize: 10.5, weight: isActive ? .medium : .regular),
           .foregroundColor: isActive ? Style.gutterActive : Style.gutter,
         ]
         label.draw(
-          at: NSPoint(x: 44 - label.size(withAttributes: attributes).width, y: y + 2),
+          at: NSPoint(x: 38 - label.size(withAttributes: attributes).width, y: y + 3),
           withAttributes: attributes)
         line += 1
       }
@@ -303,9 +306,12 @@ import TCodeCore
       ? candidate : NSFont.monospacedSystemFont(ofSize: fontSize, weight: .regular)
     editor.textColor = Style.editorText
     editor.backgroundColor = Style.editorBackground
-    editor.insertionPointColor = .controlAccentColor
+    editor.insertionPointColor = Style.accent
+    editor.selectedTextAttributes = [
+      .backgroundColor: Style.accentWash, .foregroundColor: Style.editorText,
+    ]
     // Reserve the gutter inside the text surface; macOS overlay rulers cover that area.
-    editor.textContainerInset = NSSize(width: 52, height: 12)
+    editor.textContainerInset = NSSize(width: 46, height: 12)
     editor.isVerticallyResizable = true
     editor.isHorizontallyResizable = false
     editor.autoresizingMask = [.width]

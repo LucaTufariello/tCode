@@ -17,7 +17,7 @@ struct Problem: Sendable {
 {
   private let table = NSTableView()
   private let scroll = NSScrollView()
-  private let search = NSSearchField()
+  private let search = SearchWell(placeholder: "Filter problems")
   private let countLabel = NSTextField(labelWithString: "")
   private let emptyLabel = NSTextField(labelWithString: "No problems detected.")
   private var all: [Problem] = []
@@ -42,28 +42,28 @@ struct Problem: Sendable {
       stack.trailingAnchor.constraint(equalTo: root.trailingAnchor),
     ])
 
-    search.placeholderString = "Filter problems"
-    search.delegate = self
-    search.controlSize = .small
-    search.font = Style.body
-    search.widthAnchor.constraint(equalToConstant: 220).isActive = true
-    search.setAccessibilityLabel("Filter problems")
-    countLabel.font = Style.caption
-    countLabel.textColor = .secondaryLabelColor
+    search.field.delegate = self
+    countLabel.font = Style.monoSmall
+    countLabel.textColor = .tertiaryLabelColor
     let spacer = NSView()
     spacer.setContentHuggingPriority(NSLayoutConstraint.Priority(1), for: .horizontal)
     let header = NSStackView(views: [search, countLabel, spacer])
     header.orientation = .horizontal
     header.spacing = 8
-    header.edgeInsets = NSEdgeInsets(top: 6, left: 10, bottom: 6, right: 10)
+    header.edgeInsets = NSEdgeInsets(top: 5, left: 12, bottom: 5, right: 12)
     stack.addArrangedSubview(header)
     header.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
+    let headerRule = HairlineView(.horizontal)
+    stack.addArrangedSubview(headerRule)
+    headerRule.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
+    headerRule.heightAnchor.constraint(equalToConstant: 1).isActive = true
 
     table.addTableColumn(NSTableColumn(identifier: .init("problem")))
     table.headerView = nil
-    table.rowHeight = 26
-    table.intercellSpacing = NSSize(width: 0, height: 1)
-    table.style = .inset
+    table.rowHeight = Style.rowHeight
+    table.intercellSpacing = .zero
+    table.style = .fullWidth
+    table.selectionHighlightStyle = .none
     table.backgroundColor = .clear
     table.dataSource = self
     table.delegate = self
@@ -106,7 +106,8 @@ struct Problem: Sendable {
   }
 
   private func applyFilter() {
-    let query = search.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    let query = search.field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+      .lowercased()
     filtered =
       query.isEmpty
       ? all
@@ -119,7 +120,7 @@ struct Problem: Sendable {
       filtered.count == 1 ? "1 problem" : "\(filtered.count) problems"
     emptyLabel.stringValue =
       all.isEmpty
-      ? "No problems detected." : "No problems match “\(search.stringValue)”."
+      ? "No problems detected." : "No problems match “\(search.field.stringValue)”."
     emptyLabel.isHidden = !filtered.isEmpty
   }
 
@@ -134,6 +135,10 @@ struct Problem: Sendable {
     cell.identifier = identifier
     cell.configure(filtered[row])
     return cell
+  }
+
+  func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
+    IndustrialRowView()
   }
 
   func controlTextDidChange(_ notification: Notification) {
@@ -156,24 +161,24 @@ struct Problem: Sendable {
     icon.translatesAutoresizingMaskIntoConstraints = false
     message.translatesAutoresizingMaskIntoConstraints = false
     location.translatesAutoresizingMaskIntoConstraints = false
-    message.font = Style.body
+    message.font = NSFont.systemFont(ofSize: 11.5)
     message.lineBreakMode = .byTruncatingTail
-    location.font = Style.caption
-    location.textColor = .secondaryLabelColor
+    location.font = Style.monoSmall
+    location.textColor = .tertiaryLabelColor
     location.alignment = .right
     location.lineBreakMode = .byTruncatingMiddle
     addSubview(icon)
     addSubview(message)
     addSubview(location)
     NSLayoutConstraint.activate([
-      icon.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
+      icon.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
       icon.centerYAnchor.constraint(equalTo: centerYAnchor),
-      icon.widthAnchor.constraint(equalToConstant: 14),
-      icon.heightAnchor.constraint(equalToConstant: 14),
-      message.leadingAnchor.constraint(equalTo: icon.trailingAnchor, constant: 8),
+      icon.widthAnchor.constraint(equalToConstant: 13),
+      icon.heightAnchor.constraint(equalToConstant: 13),
+      message.leadingAnchor.constraint(equalTo: icon.trailingAnchor, constant: 9),
       message.centerYAnchor.constraint(equalTo: centerYAnchor),
       location.leadingAnchor.constraint(greaterThanOrEqualTo: message.trailingAnchor, constant: 10),
-      location.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
+      location.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
       location.centerYAnchor.constraint(equalTo: centerYAnchor),
       location.widthAnchor.constraint(lessThanOrEqualToConstant: 260),
     ])

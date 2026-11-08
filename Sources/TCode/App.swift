@@ -53,11 +53,108 @@ extension Notification.Name {
       }
       if windows.isEmpty { newWindow(nil) }
       for doc in recovered { current?.add(doc) }
-      NSApp.appearance = UserDefaults.standard.string(forKey: "appearance").flatMap {
+      let appearance =
+        ProcessInfo.processInfo.environment["TCODE_APPEARANCE"]
+        ?? UserDefaults.standard.string(forKey: "appearance")
+      NSApp.appearance = appearance.flatMap {
         $0 == "light"
           ? NSAppearance(named: .aqua) : $0 == "dark" ? NSAppearance(named: .darkAqua) : nil
       }
       NSApp.activate(ignoringOtherApps: true)
+      // Temporary visual-check hook: open a settings section without a menu command.
+      if ProcessInfo.processInfo.environment["TCODE_SHOW_SETTINGS"] != nil { showSettings() }
+      // Temporary visual-check hook: open a file in the front workspace.
+      if let file = ProcessInfo.processInfo.environment["TCODE_OPEN_FILE"] {
+        current?.open(URL(fileURLWithPath: file))
+      }
+      // Temporary visual-check hooks: reveal a chrome surface without a menu command.
+      for (variable, action) in [
+        ("TCODE_SHOW_AGENT", "agent"), ("TCODE_SHOW_PANEL", "panel"),
+        ("TCODE_SHOW_INSPECTOR", "inspector"),
+      ] where ProcessInfo.processInfo.environment[variable] != nil {
+        current?.perform(action)
+      }
+      // Temporary visual-check hook: open a language sheet without a menu command.
+      if let sheet = ProcessInfo.processInfo.environment["TCODE_LANGUAGE_SHEET"] {
+        Task { @MainActor in
+          try? await Task.sleep(for: .seconds(1))
+          let environment = LanguageEnvironment.shared
+          environment.reload()
+          switch sheet {
+          case "install":
+            environment.prepareInstallation(id: "python")
+          case "remove":
+            if let pack = environment.packs.first { environment.prepareRemoval(pack) }
+          case "remove-fake":
+            if let pack = environment.packs.first,
+              let data = """
+                {"recipeID":"python-tools","version":"2026.10.21","installedAt":0,\
+                "managedDirectory":"/Users/lucatufariello/Library/Application Support/tCode/tools/python-tools/2026.10.21",\
+                "executables":{},"owned":true}
+                """.data(using: .utf8),
+              let receipt = try? JSONDecoder().decode(ToolInstallReceipt.self, from: data)
+            {
+              environment.removal = LanguageRemovalRequest(
+                pack: pack, receipts: [receipt], grammarIDs: ["python"],
+                externalRecipeIDs: ["python3"],
+                sharedImpact: [
+                  "Other workspaces that use these shared downloads will need them reinstalled."
+                ])
+            }
+          default:
+            break
+          }
+        }
+      }
+      // Temporary visual-check hook: render the front window to a PNG and exit.
+      if let path = ProcessInfo.processInfo.environment["TCODE_SNAPSHOT"] {
+        let seconds =
+          Double(ProcessInfo.processInfo.environment["TCODE_SNAPSHOT_DELAY"] ?? "") ?? 2
+        try? await Task.sleep(for: .seconds(seconds))
+        let target =
+          ProcessInfo.processInfo.environment["TCODE_LANGUAGE_SHEET"] != nil
+          ? (NSApp.windows.first { $0.sheetParent != nil }
+            ?? settings?.window ?? NSApp.keyWindow ?? current?.window)
+          : ProcessInfo.processInfo.environment["TCODE_SHOW_SETTINGS"] != nil
+            ? (settings?.window ?? NSApp.keyWindow ?? current?.window)
+            : (NSApp.keyWindow ?? current?.window)
+        if let win = target {
+          var lines: [String] = ["window bg=\(win.backgroundColor) frame=\(win.frame)"]
+          func dump(_ v: NSView, _ depth: Int) {
+            let pad = String(repeating: "  ", count: depth)
+            var extra = ""
+            if let layer = v.layer, let bg = layer.backgroundColor {
+              extra = " layer=\(NSColor(cgColor: bg) ?? .clear)"
+            }
+            if let tv = v as? NSTextView { extra += " textbg=\(tv.backgroundColor)" }
+            lines.append("\(pad)\(type(of: v)) frame=\(v.frame) hidden=\(v.isHidden)\(extra)")
+            for sub in v.subviews { dump(sub, depth + 1) }
+          }
+          if let view = win.contentView { dump(view, 0) }
+          try? lines.joined(separator: "\n").write(
+            toFile: "/tmp/hierarchy.log", atomically: true, encoding: .utf8)
+        }
+        if let win = target,
+          let view = ProcessInfo.processInfo.environment["TCODE_SNAPSHOT_FULL"] != nil
+            ? win.contentView?.superview : win.contentView,
+          let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds)
+        {
+          NSGraphicsContext.saveGraphicsState()
+          if let context = NSGraphicsContext(bitmapImageRep: rep) {
+            NSGraphicsContext.current = context
+            win.effectiveAppearance.performAsCurrentDrawingAppearance {
+              (win.backgroundColor ?? .windowBackgroundColor).setFill()
+              view.bounds.fill()
+            }
+          }
+          NSGraphicsContext.restoreGraphicsState()
+          view.cacheDisplay(in: view.bounds, to: rep)
+          try? rep.representation(using: .png, properties: [:])?
+            .write(to: URL(fileURLWithPath: path))
+        }
+        // A snapshot run must not wait on the unsaved-document quit prompt.
+        exit(0)
+      }
     }
   }
   func newWindow(_ root: URL?) {
@@ -407,65 +504,18 @@ extension Notification.Name {
   func showSettings() {
     if settings == nil {
       let w = NSWindow(
-        contentRect: NSRect(x: 0, y: 0, width: 720, height: 560),
+        contentRect: NSRect(x: 0, y: 0, width: 860, height: 620),
         styleMask: [.titled, .closable, .resizable],
         backing: .buffered, defer: false)
       w.title = "Settings"
+      w.backgroundColor = Style.chrome
+      w.titlebarAppearsTransparent = true
+      w.titlebarSeparatorStyle = .none
       w.contentViewController = NSHostingController(rootView: SettingsView())
       w.center()
       settings = NSWindowController(window: w)
     }
     settings?.showWindow(nil)
-  }
-}
-
-struct SettingsView: View {
-  @ObservedObject private var languageEnvironment = LanguageEnvironment.shared
-  @AppStorage("fontSize") var fontSize = 13.0
-  @AppStorage("indentWidth") var indentWidth = 4
-  @AppStorage("autosave") var autosave = false
-  @AppStorage("appearance") var appearance = "system"
-  @AppStorage("fontName") var fontName = "SF Mono"
-  var body: some View {
-    TabView {
-      Form {
-        Section("Editor") {
-          Slider(value: $fontSize, in: 10...24, step: 1) { Text("Font size: \(Int(fontSize))") }
-          TextField("Monospaced font name", text: $fontName)
-          Stepper("Indentation: \(indentWidth) spaces", value: $indentWidth, in: 1...8)
-          Toggle("Autosave after edits (checks for disk conflicts)", isOn: $autosave)
-          Picker("Appearance", selection: $appearance) {
-            Text("System").tag("system")
-            Text("Light").tag("light")
-            Text("Dark").tag("dark")
-          }.onChange(of: appearance) { _, value in
-            NSApp.appearance =
-              value == "light"
-              ? NSAppearance(named: .aqua) : value == "dark" ? NSAppearance(named: .darkAqua) : nil
-          }
-          Text(
-            "New editor panes use the configured monospaced font and indentation. Recovery copies are always enabled."
-          ).font(.caption).foregroundStyle(.secondary)
-        }
-        Section("Privacy") {
-          Text(
-            "Editing works offline. tCode has no account, telemetry, or source upload. Language tools run locally when you choose Enable Language Tools in a workspace."
-          )
-        }
-      }.formStyle(.grouped).tabItem { Label("General", systemImage: "gearshape") }
-      LanguageSupportView()
-        .tabItem { Label("Language Support", systemImage: "puzzlepiece.extension") }
-      MarketplaceView()
-        .tabItem { Label("Marketplace", systemImage: "square.grid.2x2") }
-      AgentSettingsView()
-        .tabItem { Label("Agent", systemImage: "sparkles") }
-      ShortcutsView().tabItem { Label("Shortcuts", systemImage: "keyboard") }
-    }
-    .padding()
-    .frame(width: 720, height: 560)
-    .sheet(item: $languageEnvironment.installation) { request in
-      LanguageInstallationView(request: request, environment: languageEnvironment)
-    }
   }
 }
 
@@ -519,52 +569,87 @@ struct ShortcutsView: View {
     return Entry.glyph(override?["key"] ?? entry.key, override?["modifiers"] ?? entry.modifiers)
   }
   var body: some View {
-    Form {
-      Text("Customize a tCode menu command. Changes apply immediately.")
-        .foregroundStyle(.secondary)
-      Picker("Command", selection: $command) {
-        ForEach(Self.catalog) { Text($0.label).tag($0.id) }
-      }
-      .onChange(of: command) { _, value in
-        guard let next = Self.catalog.first(where: { $0.id == value }) else { return }
-        key = next.key
-        modifiers = next.modifiers
-      }
-      LabeledContent("Current shortcut", value: current())
-      TextField("Key (one character)", text: $key)
-      TextField("Modifiers", text: $modifiers)
-      Text("Modifiers: command, shift, option, control. Separate with spaces.")
-        .font(.caption)
-        .foregroundStyle(.secondary)
-      HStack {
-        Button("Apply Shortcut") {
-          guard key.count == 1 else {
-            result = "Enter one character."
-            return
+    ScrollView {
+      VStack(alignment: .leading, spacing: 0) {
+        SettingsHeading("Command")
+        VStack(spacing: 0) {
+          SettingsRow("Command") {
+            IndustrialMenuButton(title: entry.label) {
+              ForEach(Self.catalog) { item in
+                Button(item.label) {
+                  command = item.id
+                  key = item.key
+                  modifiers = item.modifiers
+                  result = ""
+                }
+              }
+            }
           }
-          var bindings = customBindings()
-          bindings[command] = ["key": key, "modifiers": modifiers]
-          UserDefaults.standard.set(bindings, forKey: "keybindings")
-          (NSApp.delegate as? AppDelegate)?.makeMenu()
-          result = "\(entry.label) is now \(current())."
+          SettingsRule()
+          SettingsRow("Current shortcut") {
+            Text(current())
+              .font(.system(size: 11.5, design: .monospaced))
+              .foregroundStyle(.secondary)
+          }
+          SettingsRule()
+          SettingsRow("Key (one character)") {
+            IndustrialTextField(text: $key, width: 60)
+          }
+          SettingsRule()
+          SettingsRow("Modifiers") {
+            IndustrialTextField(text: $modifiers, width: 220)
+          }
         }
-        Button("Reset This Command") {
-          var bindings = customBindings()
-          bindings.removeValue(forKey: command)
-          UserDefaults.standard.set(bindings, forKey: "keybindings")
-          (NSApp.delegate as? AppDelegate)?.makeMenu()
-          key = entry.key
-          modifiers = entry.modifiers
-          result = "\(entry.label) restored to \(entry.glyph)."
+        .overlay(alignment: .top) { SettingsRule() }
+        .overlay(alignment: .bottom) { SettingsRule() }
+        Text("Modifiers: command, shift, option, control. Separate with spaces. Changes apply immediately.")
+          .font(.system(size: 10.5))
+          .foregroundStyle(.tertiary)
+          .padding(.top, 10)
+
+        HStack(spacing: 8) {
+          IndustrialSwiftButton(title: "Apply Shortcut", kind: .primary, action: apply)
+          IndustrialSwiftButton(title: "Reset This Command", action: reset)
+          IndustrialSwiftButton(title: "Restore All Default Shortcuts", action: restoreAll)
         }
+        .padding(.top, 18)
+        Text(result)
+          .font(.system(size: 10.5, design: .monospaced))
+          .foregroundStyle(.tertiary)
+          .padding(.top, 12)
       }
-      Button("Restore All Default Shortcuts") {
-        UserDefaults.standard.removeObject(forKey: "keybindings")
-        (NSApp.delegate as? AppDelegate)?.makeMenu()
-        result = "Defaults restored."
-      }
-      Text(result).foregroundStyle(.secondary)
-    }.formStyle(.grouped)
+      .padding(.horizontal, 24)
+      .padding(.vertical, 18)
+      .frame(maxWidth: .infinity, alignment: .leading)
+    }
+  }
+
+  private func apply() {
+    guard key.count == 1 else {
+      result = "Enter one character."
+      return
+    }
+    var bindings = customBindings()
+    bindings[command] = ["key": key, "modifiers": modifiers]
+    UserDefaults.standard.set(bindings, forKey: "keybindings")
+    (NSApp.delegate as? AppDelegate)?.makeMenu()
+    result = "\(entry.label) is now \(current())."
+  }
+
+  private func reset() {
+    var bindings = customBindings()
+    bindings.removeValue(forKey: command)
+    UserDefaults.standard.set(bindings, forKey: "keybindings")
+    (NSApp.delegate as? AppDelegate)?.makeMenu()
+    key = entry.key
+    modifiers = entry.modifiers
+    result = "\(entry.label) restored to \(entry.glyph)."
+  }
+
+  private func restoreAll() {
+    UserDefaults.standard.removeObject(forKey: "keybindings")
+    (NSApp.delegate as? AppDelegate)?.makeMenu()
+    result = "Defaults restored."
   }
 
   private func customBindings() -> [String: [String: String]] {

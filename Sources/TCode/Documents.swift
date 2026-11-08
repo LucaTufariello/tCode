@@ -183,6 +183,11 @@ struct EditorViewState {
     let file = try await Task.detached {
       try TextFile(data: Data(contentsOf: canonical, options: .mappedIfSafe))
     }.value
+    // A second open can pass the check above while this read is in flight; re-check so the
+    // same file never ends up as two documents (and two tabs).
+    if let existing = documents.first(where: { $0.canonicalURL == canonical }) {
+      return existing
+    }
     let doc = CodeDocument(url: url, file: file)
     doc.canonicalURL = canonical
     documents.append(doc)
